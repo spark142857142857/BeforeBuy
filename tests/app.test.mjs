@@ -17,7 +17,24 @@ test("home renders Korean stock search and industry map", async () => {
   assert.match(html, /한국 종목 검색/);
   assert.match(html, /INDUSTRY MAP/);
   assert.match(html, /삼성전자/);
+  assert.match(html, /한국 상장 종목[\s\S]*[0-9,]+[\s\S]*개 검색/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
+});
+
+test("search API finds stocks outside the curated demo catalog", async () => {
+  const response = await render("/api/stocks/search?q=동화약품");
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.ok(payload.results.some((stock) => stock.symbol === "000020" && stock.slug === "kr-000020"));
+});
+
+test("basic stock page explains the staged data pipeline", async () => {
+  const response = await render("/stocks/kr-000020");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /동화약품/);
+  assert.match(html, /전체 검색 연결 완료/);
+  assert.match(html, /DART 사업 내용 수집/);
 });
 
 test("Samsung detail includes global peers, ETFs and explanations", async () => {

@@ -173,6 +173,22 @@ button { color: inherit; }
 .no-peer-panel { padding: 95px 0; }
 .no-peer-panel h2 { font-size: 38px; }
 .no-peer-panel p:not(.eyebrow) { color: var(--muted); margin-bottom: 30px; }
+.basic-asset-hero { min-height: calc(100vh - 224px); }
+.master-metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 46px; background: var(--line); border: 1px solid var(--line); }
+.master-metric-grid article { min-height: 112px; padding: 20px; background: white; display: flex; flex-direction: column; justify-content: space-between; }
+.master-metric-grid small { color: var(--muted); font-size: 11px; }
+.master-metric-grid strong { font-size: 18px; letter-spacing: -.02em; }
+.pipeline-status { margin-top: 22px; background: var(--forest); color: white; padding: 36px; }
+.pipeline-status .eyebrow { color: var(--lime); }
+.pipeline-status h2 { max-width: 750px; margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -.045em; word-break: keep-all; }
+.pipeline-status > p:not(.eyebrow) { max-width: 760px; margin: 18px 0 30px; color: rgba(255,255,255,.65); line-height: 1.7; word-break: keep-all; }
+.pipeline-status ol { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; padding: 0; margin: 0; background: rgba(255,255,255,.18); }
+.pipeline-status li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; min-height: 86px; padding: 15px; background: #234b37; }
+.pipeline-status li > span { color: rgba(255,255,255,.45); font: 12px monospace; }
+.pipeline-status li > strong { font-size: 13px; }
+.pipeline-status li > small { grid-column: 2; color: rgba(255,255,255,.45); font-size: 10px; }
+.pipeline-status li.done { background: var(--lime); color: var(--ink); }
+.pipeline-status li.done > span, .pipeline-status li.done > small { color: #53651e; }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding-top: 70px; }
@@ -214,6 +230,9 @@ button { color: inherit; }
   .asset-summary { font-size: 17px; }
   .alternative-grid, .difference-grid { grid-template-columns: 1fr; }
   .alternative-card { min-height: 300px; }
+  .master-metric-grid { grid-template-columns: repeat(2, 1fr); }
+  .pipeline-status { padding: 25px 20px; }
+  .pipeline-status ol { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

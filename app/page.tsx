@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { IndustryMap } from "@/components/IndustryMap";
 import { SearchExplorer } from "@/components/SearchExplorer";
-import { getKoreanStocks, getSectorGroups, snapshotMeta } from "@/lib/data/catalog";
+import { getKoreanStocks, getSectorGroups } from "@/lib/data/catalog";
+import { getFeaturedStockResults, getKoreanStockCount, krxSnapshotMeta } from "@/lib/data/krx-master";
 
 export default function Home() {
   const stocks = getKoreanStocks();
+  const featured = getFeaturedStockResults();
+  const stockCount = getKoreanStockCount();
   const groups = getSectorGroups();
 
   return (
@@ -15,7 +18,7 @@ export default function Home() {
           <span>BEFORE BUY</span>
         </Link>
         <div className="header-meta">
-          <span className="live-dot" /> 데이터 기준 {snapshotMeta.asOf}
+          <span className="live-dot" /> 종목 목록 {krxSnapshotMeta.asOf}
         </div>
       </header>
 
@@ -30,7 +33,7 @@ export default function Home() {
             관심 있는 한국 종목을 입력하면 사업이 닮은 국내외 기업과 ETF를
             찾아드립니다. 추천이 아니라, 비교할 근거를 제공합니다.
           </p>
-          <SearchExplorer stocks={stocks} />
+          <SearchExplorer featured={featured} />
           <div className="quick-links" aria-label="인기 검색">
             <span>빠른 비교</span>
             {stocks.slice(0, 4).map((stock) => (
@@ -46,7 +49,7 @@ export default function Home() {
           <ol className="decision-steps">
             <li>
               <span>01</span>
-              <div><strong>관심 종목을 고릅니다</strong><p>한국 대표 종목 {stocks.length}개 지원</p></div>
+              <div><strong>관심 종목을 고릅니다</strong><p>한국 상장 종목 {stockCount.toLocaleString("ko-KR")}개 검색</p></div>
             </li>
             <li>
               <span>02</span>
