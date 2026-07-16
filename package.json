@@ -15,6 +15,7 @@
     "data:dart:map": "uv run python pipeline/collect_dart_business.py --corp-codes-only",
     "data:dart:sample": "uv run python pipeline/collect_dart_business.py --symbols \"005930,035420,105560,012450,000020,068270,296520,317860,000650,088260\" --output work/dart_annual_sample.json --refresh",
     "data:dart": "uv run python pipeline/collect_dart_business.py",
+    "data:profiles": "uv run python pipeline/prepare_web_profiles.py",
     "data:similarity": "uv run python pipeline/build_similarity.py",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern outputs --ignore-pattern work --ignore-pattern .venv --ignore-pattern data",
     "db:generate": "drizzle-kit generate"

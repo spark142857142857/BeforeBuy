@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ComparisonDashboard } from "./ComparisonDashboard";
+import { DomesticPeerSection } from "@/components/DomesticPeerSection";
 import { assets, getAlternatives, getAsset, snapshotMeta } from "@/lib/data/catalog";
 import { getKoreanStockMaster, krxSnapshotMeta, type KoreanStockMasterRecord } from "@/lib/data/krx-master";
 
@@ -65,6 +66,10 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           {selected.exposures.map((item) => <span key={item}>{item}</span>)}
         </div>
       </section>
+
+      {selected.market === "KR" && selected.type === "stock" && (
+        <DomesticPeerSection symbol={selected.ticker} />
+      )}
 
       {peers.length ? (
         <ComparisonDashboard selected={selected} alternatives={peers} fxAsOf={snapshotMeta.fxAsOf} />
@@ -130,18 +135,20 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
 
         <div className="pipeline-status">
           <p className="eyebrow">DATA PIPELINE STATUS</p>
-          <h2>종목 검색은 연결됐고, 사업 비교 데이터는 다음 단계입니다</h2>
+          <h2>전체 검색과 연간 사업 비교 데이터가 연결됐습니다</h2>
           <p>
-            현재 KRX 종목 마스터 정보까지 제공됩니다. 다음 단계에서 DART 사업 내용을 연결한 뒤
-            업종과 사업 설명을 기반으로 유사 종목 점수를 계산합니다.
+            최신 연간 사업보고서와 KRX 업종·주요 제품을 사용해 국내 유사 종목을 계산합니다.
+            데이터가 부족한 종목은 제한 상태와 이유를 표시합니다.
           </p>
           <ol>
             <li className="done"><span>01</span><strong>한국 상장 종목 검색</strong><small>완료</small></li>
-            <li><span>02</span><strong>DART 사업 내용 수집</strong><small>다음 작업</small></li>
-            <li><span>03</span><strong>유사 종목·ETF 비교</strong><small>준비 중</small></li>
+            <li className="done"><span>02</span><strong>DART 연간 사업 내용</strong><small>완료</small></li>
+            <li className="done"><span>03</span><strong>자동 국내 유사 종목</strong><small>완료</small></li>
           </ol>
         </div>
       </section>
+
+      <DomesticPeerSection symbol={stock.symbol} />
 
       <footer className="site-footer shell">
         <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>

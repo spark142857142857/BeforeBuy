@@ -46,9 +46,9 @@ class SimilarityPipelineTest(unittest.TestCase):
         }
         business = {
             "companies": {
-                "000001": {"status": "ok", "text": "메모리 반도체와 HBM을 생산하고 데이터센터에 공급합니다."},
-                "000002": {"status": "ok", "text": "DRAM과 HBM 메모리 반도체를 생산합니다."},
-                "000003": {"status": "ok", "text": "전문의약품과 백신을 연구하고 판매합니다."},
+                "000001": {"status": "ok", "reportType": "annual", "textConfidence": "standard", "text": "메모리 반도체와 HBM을 생산하고 데이터센터에 공급합니다."},
+                "000002": {"status": "ok", "reportType": "annual", "textConfidence": "standard", "text": "DRAM과 HBM 메모리 반도체를 생산합니다."},
+                "000003": {"status": "ok", "reportType": "annual", "textConfidence": "standard", "text": "전문의약품과 백신을 연구하고 판매합니다."},
             }
         }
 
@@ -56,7 +56,8 @@ class SimilarityPipelineTest(unittest.TestCase):
 
         self.assertEqual(result["similar"]["000001"][0]["symbol"], "000002")
         self.assertEqual(result["similar"]["000001"][0]["industrySimilarity"], 1.0)
-        self.assertIn("동일 KRX 업종", result["similar"]["000001"][0]["reason"])
+        self.assertGreater(result["similar"]["000001"][0]["productSimilarity"], 0)
+        self.assertTrue(result["similar"]["000001"][0]["sharedTerms"])
         self.assertFalse(result["method"]["llmUsed"])
 
 

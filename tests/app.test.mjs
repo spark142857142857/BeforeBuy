@@ -28,13 +28,17 @@ test("search API finds stocks outside the curated demo catalog", async () => {
   assert.ok(payload.results.some((stock) => stock.symbol === "000020" && stock.slug === "kr-000020"));
 });
 
-test("basic stock page explains the staged data pipeline", async () => {
+test("basic stock page includes annual business profile and domestic peers", async () => {
   const response = await render("/stocks/kr-000020");
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /동화약품/);
   assert.match(html, /전체 검색 연결 완료/);
-  assert.match(html, /DART 사업 내용 수집/);
+  assert.match(html, /DART 연간 사업 내용/);
+  assert.match(html, /연간 사업보고서 기반 국내 비교/);
+  assert.match(html, /자동 국내 유사 종목/);
+  assert.match(html, /삼진제약/);
+  assert.match(html, /DART 원문/);
 });
 
 test("Samsung detail includes global peers, ETFs and explanations", async () => {

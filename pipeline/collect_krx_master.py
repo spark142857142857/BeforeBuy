@@ -14,6 +14,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "kr_stocks.json"
 SUPPORTED_MARKETS = {"KOSPI", "KOSDAQ", "KONEX"}
+COMMON_NAMES_ENDING_WITH_U = {"성우", "에코글로우", "이오플로우"}
 
 
 def text(value: Any) -> str:
@@ -33,6 +34,8 @@ def iso_date(value: Any) -> str | None:
 
 def security_type(name: str) -> str:
     compact = re.sub(r"\s+", "", name)
+    if compact in COMMON_NAMES_ENDING_WITH_U:
+        return "common"
     if "스팩" in compact or compact.endswith("SPAC"):
         return "spac"
     if "리츠" in compact or compact.endswith("REIT"):

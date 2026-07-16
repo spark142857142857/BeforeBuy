@@ -92,6 +92,15 @@ export function getKoreanStockMaster(slug: string) {
   return records.find((record) => record.symbol === symbol);
 }
 
+export function getKoreanStockBySymbol(symbol: string) {
+  return records.find((record) => record.symbol === symbol.toUpperCase());
+}
+
+export function getKoreanStockResultBySymbol(symbol: string) {
+  const record = getKoreanStockBySymbol(symbol);
+  return record ? resultFor(record) : undefined;
+}
+
 export function getKoreanStockCount() {
   return snapshot.counts.total;
 }

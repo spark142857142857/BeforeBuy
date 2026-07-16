@@ -69,6 +69,13 @@ def industry_similarity(left: dict[str, Any], right: dict[str, Any]) -> float:
     return len(left_tokens & right_tokens) / len(union) if union else 0.0
 
 
+def product_similarity(left: dict[str, Any], right: dict[str, Any]) -> float:
+    left_tokens = tokens(left.get("products", ""))
+    right_tokens = tokens(right.get("products", ""))
+    denominator = min(len(left_tokens), len(right_tokens))
+    return len(left_tokens & right_tokens) / denominator if denominator else 0.0
+
+
 def shared_terms(left: dict[str, Any], right: dict[str, Any]) -> list[str]:
     left_terms = tokens(f"{left.get('industry', '')} {left.get('products', '')}")
     right_terms = tokens(f"{right.get('industry', '')} {right.get('products', '')}")
@@ -76,23 +83,18 @@ def shared_terms(left: dict[str, Any], right: dict[str, Any]) -> list[str]:
     return sorted(common, key=lambda value: (-len(value), value))[:3]
 
 
-def reason_for(left: dict[str, Any], right: dict[str, Any], terms: list[str]) -> str:
-    same_industry = left.get("industry") and left.get("industry") == right.get("industry")
-    parts = []
-    if same_industry:
-        parts.append(f"동일 KRX 업종({left['industry']})")
-    elif industry_similarity(left, right) > 0:
-        parts.append("KRX 업종 설명이 일부 겹침")
-    if terms:
-        parts.append(f"주요 제품 키워드 {', '.join(terms)} 공통")
-    return ", ".join(parts) if parts else "DART 사업 내용의 로컬 텍스트 유사도가 높음"
-
-
 def document_for(stock: dict[str, Any], business: dict[str, Any]) -> str:
     industry = stock.get("industry", "")
     products = stock.get("products", "")
     business_text = business.get("text", "")[:8_000]
-    return " ".join([industry] * 4 + [products] * 2 + [business_text])
+    low_confidence = business.get("textConfidence") == "low"
+    industry_repeats = 8 if low_confidence else 4
+    product_repeats = 4 if low_confidence else 2
+    return " ".join(
+        [industry] * industry_repeats
+        + [products] * product_repeats
+        + [business_text]
+    )
 
 
 def build_similarity(
@@ -109,6 +111,7 @@ def build_similarity(
         if (
             symbol in stocks_by_symbol
             and item.get("status") == "ok"
+            and item.get("reportType") == "annual"
             and item.get("text")
             and stocks_by_symbol[symbol].get("securityType") == "common"
         )
@@ -138,30 +141,82 @@ def build_similarity(
     neighbors = NearestNeighbors(metric="cosine", algorithm="brute", n_jobs=-1)
     neighbors.fit(embeddings)
     distances, indices = neighbors.kneighbors(embeddings, n_neighbors=neighbor_count)
+    industry_indices: dict[str, set[int]] = {}
+    product_indices: dict[str, set[int]] = {}
+    for index, stock in enumerate(eligible):
+        industry = stock.get("industry", "").strip()
+        if industry:
+            industry_indices.setdefault(industry, set()).add(index)
+        for term in tokens(stock.get("products", "")):
+            product_indices.setdefault(term, set()).add(index)
 
     results: dict[str, list[dict[str, Any]]] = {}
     for row, stock in enumerate(eligible):
         candidates: list[dict[str, Any]] = []
-        for distance, candidate_index in zip(distances[row], indices[row], strict=True):
-            candidate = eligible[int(candidate_index)]
-            if candidate["symbol"] == stock["symbol"]:
-                continue
-            text_score = max(0.0, 1.0 - float(distance))
-            industry_score = industry_similarity(stock, candidate)
-            score = text_score * 0.7 + industry_score * 0.3
-            terms = shared_terms(stock, candidate)
-            candidates.append(
+        text_neighbor_scores = {
+            int(candidate_index): max(0.0, 1.0 - float(distance))
+            for distance, candidate_index in zip(distances[row], indices[row], strict=True)
+        }
+        candidate_indices = set(text_neighbor_scores)
+        candidate_indices.update(industry_indices.get(stock.get("industry", "").strip(), set()))
+        for term in tokens(stock.get("products", "")):
+            matches = product_indices.get(term, set())
+            if len(matches) <= 250:
+                candidate_indices.update(matches)
+        candidate_indices.discard(row)
+        ordered_indices = sorted(candidate_indices)
+        missing_text_indices = [
+            candidate_index
+            for candidate_index in ordered_indices
+            if candidate_index not in text_neighbor_scores
+        ]
+        if missing_text_indices:
+            similarities = (
+                embeddings[row] @ embeddings[missing_text_indices].T
+            ).toarray()[0]
+            text_neighbor_scores.update(
                 {
-                    "symbol": candidate["symbol"],
-                    "name": candidate["name"],
-                    "market": candidate["market"],
-                    "score": round(score, 4),
-                    "textSimilarity": round(text_score, 4),
-                    "industrySimilarity": round(industry_score, 4),
-                    "sharedTerms": terms,
-                    "reason": reason_for(stock, candidate, terms),
+                    candidate_index: max(0.0, float(similarity))
+                    for candidate_index, similarity in zip(
+                        missing_text_indices,
+                        similarities,
+                        strict=True,
+                    )
                 }
             )
+
+        for candidate_index in ordered_indices:
+            candidate = eligible[candidate_index]
+            text_score = text_neighbor_scores[candidate_index]
+            industry_score = industry_similarity(stock, candidate)
+            product_score = product_similarity(stock, candidate)
+            left_business = business["companies"][stock["symbol"]]
+            right_business = business["companies"][candidate["symbol"]]
+            low_confidence = (
+                left_business.get("textConfidence") == "low"
+                or right_business.get("textConfidence") == "low"
+            )
+            if low_confidence:
+                text_weight, industry_weight, product_weight = 0.3, 0.45, 0.25
+            else:
+                text_weight, industry_weight, product_weight = 0.55, 0.3, 0.15
+            score = (
+                text_score * text_weight
+                + industry_score * industry_weight
+                + product_score * product_weight
+            )
+            terms = shared_terms(stock, candidate)
+            result = {
+                "symbol": candidate["symbol"],
+                "score": round(score, 4),
+                "textSimilarity": round(text_score, 4),
+                "industrySimilarity": round(industry_score, 4),
+                "productSimilarity": round(product_score, 4),
+                "sharedTerms": terms,
+            }
+            if low_confidence:
+                result["confidence"] = "low"
+            candidates.append(result)
         candidates.sort(
             key=lambda item: (
                 -item["score"],
@@ -172,12 +227,13 @@ def build_similarity(
         results[stock["symbol"]] = candidates[:top_k]
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "asOf": date.today().isoformat(),
         "method": {
-            "name": "local-char-tfidf-plus-industry",
-            "textWeight": 0.7,
-            "industryWeight": 0.3,
+            "name": "annual-business-char-tfidf-plus-industry",
+            "reportType": "annual",
+            "standardWeights": {"text": 0.55, "industry": 0.3, "products": 0.15},
+            "lowConfidenceWeights": {"text": 0.3, "industry": 0.45, "products": 0.25},
             "textLimitChars": 8_000,
             "features": int(embeddings.shape[1]),
             "llmUsed": False,
@@ -185,6 +241,10 @@ def build_similarity(
         "counts": {
             "companies": len(eligible),
             "recommendations": sum(len(items) for items in results.values()),
+            "lowConfidenceCompanies": sum(
+                business["companies"][stock["symbol"]].get("textConfidence") == "low"
+                for stock in eligible
+            ),
         },
         "similar": results,
     }
