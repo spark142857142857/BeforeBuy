@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises";
 
-const [catalog, krxRaw] = await Promise.all([
+const [catalog, krxRaw, dartCorpRaw] = await Promise.all([
   readFile(new URL("../lib/data/catalog.ts", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/kr_stocks.json", import.meta.url), "utf8"),
+  readFile(new URL("../data/generated/dart_corp_codes.json", import.meta.url), "utf8"),
 ]);
 const krx = JSON.parse(krxRaw);
+const dartCorp = JSON.parse(dartCorpRaw);
 const assetCount = (catalog.match(/asset\(\{/g) ?? []).length;
 const relationBlocks = (catalog.match(/^  "[a-z0-9-]+": \[$/gm) ?? []).length;
 if (assetCount < 45) throw new Error(`Expected at least 45 curated assets, found ${assetCount}`);
@@ -18,4 +20,16 @@ if (!krx.stocks.some((stock) => stock.symbol === "005930" && stock.name === "삼
 if (new Set(krx.stocks.map((stock) => stock.symbol)).size !== krx.stocks.length) {
   throw new Error("KRX master contains duplicate symbols");
 }
-console.log(`Snapshot OK: ${krx.counts.total} Korean stocks, ${assetCount} enriched assets, ${relationBlocks} relation sets`);
+if (dartCorp.counts.listedStocks !== krx.counts.total) {
+  throw new Error("DART corporation mapping does not match the KRX master size");
+}
+if (dartCorp.counts.mapped < 2500) {
+  throw new Error(`DART corporation mapping is unexpectedly small: ${dartCorp.counts.mapped}`);
+}
+if (dartCorp.companies["005930"]?.corpCode !== "00126380") {
+  throw new Error("DART corporation mapping does not include Samsung Electronics");
+}
+console.log(
+  `Snapshot OK: ${krx.counts.total} Korean stocks, ${dartCorp.counts.mapped} DART mappings, ` +
+    `${assetCount} enriched assets, ${relationBlocks} relation sets`,
+);

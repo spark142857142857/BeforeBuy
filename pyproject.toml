@@ -4,8 +4,11 @@ version = "0.1.0"
 description = "Local data pipeline for the BEFORE BUY stock explorer"
 requires-python = ">=3.11"
 dependencies = [
+  "beautifulsoup4>=4.14,<5",
   "finance-datareader>=0.9.96,<1",
   "pandas>=2.2,<3",
+  "python-dotenv>=1.1,<2",
+  "requests>=2.32,<3",
 ]
 
 [tool.uv]

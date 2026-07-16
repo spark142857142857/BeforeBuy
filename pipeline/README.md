@@ -10,3 +10,18 @@ uv run python pipeline/collect_krx_master.py
 ```
 
 결과는 `data/generated/kr_stocks.json`에 저장하며 이 파일만 GitHub에 커밋합니다.
+
+## DART 기업 매핑과 사업 내용
+
+```powershell
+# 전체 상장 종목과 DART 고유번호 매핑
+uv run python pipeline/collect_dart_business.py --corp-codes-only
+
+# 소수 종목으로 원문 추출 검증
+uv run python pipeline/collect_dart_business.py --symbols 005930,000020,035420 --output work/dart_sample.json
+
+# 전체 수집은 체크포인트 JSON을 유지하며 순차 실행
+uv run python pipeline/collect_dart_business.py
+```
+
+사업 내용은 최근 정기보고서 원문에서 `II. 사업의 내용` 구간만 추출합니다.
