@@ -39,6 +39,9 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.match(html, /자동 국내 유사 종목/);
   assert.match(html, /삼진제약/);
   assert.match(html, /DART 원문/);
+  assert.match(html, /국내외 대안으로 범위 넓히기/);
+  assert.match(html, /일라이 릴리/);
+  assert.match(html, /TIGER 200 헬스케어/);
 });
 
 test("Samsung detail includes global peers, ETFs and explanations", async () => {
@@ -49,9 +52,24 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   assert.match(html, /마이크론/);
   assert.match(html, /TSMC/);
   assert.match(html, /KODEX 반도체/);
+  assert.match(html, /메모리·AI 반도체/);
+  assert.match(html, /주요 구성 종목/);
   assert.match(html, /공통점과 결정 전 차이/);
   assert.match(html, /2026-07-15/);
   assert.match(html, /원화 수익률/);
+});
+
+test("ETF detail shows representative holdings, coverage and official source", async () => {
+  const response = await render("/stocks/xlf");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /이 ETF에는 무엇이 들어 있나/);
+  assert.match(html, /JPMorgan Chase/);
+  assert.match(html, /Berkshire Hathaway/);
+  assert.match(html, /전체 구성/);
+  assert.match(html, /76/);
+  assert.match(html, /State Street/);
+  assert.match(html, /공식 자료에서 확인/);
 });
 
 test("snapshot endpoint exposes freshness and asset count", async () => {

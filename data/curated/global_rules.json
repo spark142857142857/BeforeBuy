@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "description": "Deterministic rules that connect Korean business profiles to curated global peers and ETFs.",
+  "rules": [
+    {
+      "id": "semiconductor-memory",
+      "theme": "semiconductor",
+      "label": "메모리·AI 반도체",
+      "industryKeywords": ["반도체"],
+      "productKeywords": ["dram", "nand", "hbm", "메모리"],
+      "businessKeywords": ["dram", "nand", "hbm", "메모리 반도체"],
+      "minimumScore": 4,
+      "peerSlugs": ["micron", "nvidia"],
+      "etfSlugs": ["kodex-semiconductor", "soxx"],
+      "reason": "메모리·AI 반도체 수요와 반도체 설비투자 사이클을 함께 검토할 수 있습니다."
+    },
+    {
+      "id": "semiconductor-foundry",
+      "theme": "semiconductor",
+      "label": "파운드리·반도체 제조",
+      "industryKeywords": ["반도체"],
+      "productKeywords": ["파운드리", "웨이퍼", "집적회로"],
+      "businessKeywords": ["파운드리", "웨이퍼", "반도체 제조", "fabless", "팹리스"],
+      "minimumScore": 5,
+      "peerSlugs": ["tsmc", "nvidia"],
+      "etfSlugs": ["kodex-semiconductor", "soxx"],
+      "reason": "칩 설계·위탁생산·장비를 포함한 글로벌 반도체 가치사슬과 비교합니다."
+    },
+    {
+      "id": "semiconductor-general",
+      "theme": "semiconductor",
+      "label": "반도체 밸류체인",
+      "industryKeywords": ["반도체"],
+      "productKeywords": ["반도체"],
+      "businessKeywords": ["반도체"],
+      "minimumScore": 5,
+      "peerSlugs": ["tsmc", "nvidia"],
+      "etfSlugs": ["kodex-semiconductor", "soxx"],
+      "reason": "개별 반도체 기업의 공정·제품 집중도를 글로벌 설계·제조 기업과 산업 ETF로 넓혀 봅니다."
+    },
+    {
+      "id": "automaker",
+      "theme": "mobility",
+      "label": "완성차·친환경차",
+      "industryKeywords": ["자동차용 엔진 및 자동차 제조업"],
+      "productKeywords": ["승용차", "자동차", "전기차", "버스", "트럭"],
+      "businessKeywords": ["완성차", "승용차", "전기차", "하이브리드", "자동차를 생산"],
+      "minimumScore": 6,
+      "peerSlugs": ["toyota", "tesla"],
+      "etfSlugs": ["kodex-auto", "driv"],
+      "reason": "글로벌 판매망과 전동화 전략이 다른 완성차 기업 및 모빌리티 바스켓을 비교합니다."
+    },
+    {
+      "id": "auto-parts",
+      "theme": "mobility",
+      "label": "자동차 부품·전장",
+      "industryKeywords": ["자동차 신품 부품", "자동차 재제조 부품", "자동차 차체"],
+      "productKeywords": ["자동차부품", "차량용", "전장", "타이어"],
+      "businessKeywords": ["자동차 부품", "전장부품", "모듈", "타이어"],
+      "minimumScore": 5,
+      "peerSlugs": [],
+      "etfSlugs": ["kodex-auto", "driv"],
+      "reason": "단일 부품사의 고객·제품 위험을 국내외 자동차 가치사슬 ETF와 비교합니다."
+    },
+    {
+      "id": "battery-cell",
+      "theme": "battery",
+      "label": "2차전지 셀·소재",
+      "industryKeywords": ["이차전지", "축전지"],
+      "productKeywords": ["2차전지", "이차전지", "배터리", "양극재", "음극재", "전해액"],
+      "businessKeywords": ["2차전지", "이차전지", "배터리 셀", "양극재", "음극재", "전고체"],
+      "minimumScore": 5,
+      "peerSlugs": ["albemarle"],
+      "etfSlugs": ["tiger-secondary-battery", "lit"],
+      "reason": "배터리 셀에서 소재·리튬 상류까지 수익 구조가 어떻게 달라지는지 비교합니다."
+    },
+    {
+      "id": "internet-platform",
+      "theme": "platform",
+      "label": "인터넷 플랫폼",
+      "industryKeywords": ["포털"],
+      "productKeywords": ["포털", "온라인 광고", "전자상거래"],
+      "businessKeywords": ["검색 포털", "검색광고", "온라인 광고", "커머스", "메신저"],
+      "minimumScore": 6,
+      "peerSlugs": ["alphabet", "meta", "coupang"],
+      "etfSlugs": ["kodex-internet", "qqq"],
+      "reason": "트래픽을 광고·커머스·콘텐츠로 수익화하는 글로벌 플랫폼과 기술주 바스켓을 비교합니다."
+    },
+    {
+      "id": "digital-content",
+      "theme": "platform",
+      "label": "게임·디지털 콘텐츠",
+      "industryKeywords": ["게임 소프트웨어"],
+      "productKeywords": ["게임", "콘텐츠", "웹툰", "엔터테인먼트"],
+      "businessKeywords": ["게임", "웹툰", "콘텐츠", "엔터테인먼트"],
+      "minimumScore": 5,
+      "peerSlugs": [],
+      "etfSlugs": ["kodex-internet", "qqq"],
+      "reason": "개별 흥행작 위험을 국내 콘텐츠 바스켓과 미국 대형 기술주 바스켓으로 분산해 검토합니다."
+    },
+    {
+      "id": "biopharma",
+      "theme": "healthcare",
+      "label": "제약·바이오",
+      "industryKeywords": ["의약", "생물학적 제제"],
+      "productKeywords": ["의약품", "바이오", "신약", "백신"],
+      "businessKeywords": ["바이오의약품", "신약", "제약", "임상", "바이오시밀러", "cdmo", "의약품"],
+      "minimumScore": 5,
+      "peerSlugs": ["lilly", "amgen"],
+      "etfSlugs": ["tiger-bio", "xlv"],
+      "reason": "개별 파이프라인·생산 위험과 글로벌 제약 현금흐름 및 헬스케어 분산 효과를 비교합니다."
+    },
+    {
+      "id": "medical-device",
+      "theme": "healthcare",
+      "label": "의료기기·진단",
+      "industryKeywords": ["의료용 기기", "의료용품 및 기타 의약 관련제품"],
+      "productKeywords": ["의료기기", "진단기기", "체외진단", "진단"],
+      "businessKeywords": ["의료기기", "진단기기", "체외진단", "진단 시스템"],
+      "minimumScore": 5,
+      "peerSlugs": [],
+      "etfSlugs": ["tiger-bio", "xlv"],
+      "reason": "개별 제품 허가와 판매 위험을 국내외 헬스케어 바스켓으로 넓혀 검토합니다."
+    },
+    {
+      "id": "aerospace-defense",
+      "theme": "defense",
+      "label": "항공우주·방산",
+      "industryKeywords": ["항공기", "우주선", "무기", "전투용 차량"],
+      "productKeywords": ["방산", "항공기", "엔진", "무기", "탄약", "군수"],
+      "businessKeywords": ["방산", "항공우주", "항공기 엔진", "군수", "유도무기", "전투체계"],
+      "minimumScore": 5,
+      "peerSlugs": ["ge-aerospace"],
+      "etfSlugs": ["kodex-defense", "ita"],
+      "reason": "장기 수주와 국방비에 노출된 국내외 항공우주·방산 포트폴리오를 비교합니다."
+    },
+    {
+      "id": "banking",
+      "theme": "finance",
+      "label": "은행·금융지주",
+      "industryKeywords": ["은행 및 저축기관", "기타 금융업"],
+      "requiredIndustryKeywords": ["은행 및 저축기관", "기타 금융업"],
+      "nameKeywords": ["금융", "은행", "뱅크", "신한지주"],
+      "requireNameMatch": true,
+      "productKeywords": ["은행", "금융지주"],
+      "businessKeywords": ["은행업", "금융지주", "예대마진", "대출", "수신", "여신"],
+      "minimumScore": 5,
+      "peerSlugs": ["jpmorgan", "bank-of-america"],
+      "etfSlugs": ["kodex-bank", "xlf"],
+      "reason": "금리·신용비용·자본환원 구조를 국내 은행 바스켓과 미국 종합 금융사에 걸쳐 비교합니다."
+    }
+  ]
+}

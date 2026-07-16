@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "description": "Representative top holdings snapshots from issuer materials. These are not complete portfolios.",
+  "funds": {
+    "kodex-semiconductor": {
+      "asOf": "2025-03-21",
+      "totalHoldings": 35,
+      "sourceName": "삼성자산운용",
+      "sourceUrl": "https://m.samsungfund.com/upload/kodex/newsroom/20250326134532320.pdf",
+      "holdings": [
+        {"ticker": "000660", "name": "SK하이닉스", "weight": 24.1},
+        {"ticker": "005930", "name": "삼성전자", "weight": 17.6},
+        {"ticker": "042700", "name": "한미반도체", "weight": 7.7},
+        {"ticker": "058470", "name": "리노공업", "weight": 4.1},
+        {"ticker": "000990", "name": "DB하이텍", "weight": 3.0}
+      ]
+    },
+    "soxx": {
+      "asOf": "2026-07-14",
+      "totalHoldings": 30,
+      "sourceName": "iShares",
+      "sourceUrl": "https://www.ishares.com/us/products/239705/SOXX",
+      "holdings": [
+        {"ticker": "AVGO", "name": "Broadcom"},
+        {"ticker": "MU", "name": "Micron Technology"},
+        {"ticker": "NVDA", "name": "NVIDIA"},
+        {"ticker": "AMAT", "name": "Applied Materials"},
+        {"ticker": "AMD", "name": "Advanced Micro Devices"}
+      ]
+    },
+    "kodex-auto": {
+      "asOf": "2026-06",
+      "sourceName": "삼성자산운용",
+      "sourceUrl": "https://www.samsungfund.com/etf/product/view.do?id=2ETF06",
+      "holdings": [
+        {"ticker": "005380", "name": "현대차"},
+        {"ticker": "000270", "name": "기아"},
+        {"ticker": "012330", "name": "현대모비스"},
+        {"ticker": "161390", "name": "한국타이어앤테크놀로지"},
+        {"ticker": "086280", "name": "현대글로비스"}
+      ]
+    },
+    "driv": {
+      "asOf": "2026-07-14",
+      "totalHoldings": 76,
+      "sourceName": "Global X",
+      "sourceUrl": "https://www.globalxetfs.com/funds/DRIV",
+      "holdings": [
+        {"ticker": "INTC", "name": "Intel", "weight": 5.47},
+        {"ticker": "NVDA", "name": "NVIDIA", "weight": 3.10},
+        {"ticker": "GOOGL", "name": "Alphabet", "weight": 2.91},
+        {"ticker": "BB", "name": "BlackBerry", "weight": 2.72},
+        {"ticker": "STMPA", "name": "STMicroelectronics", "weight": 2.65}
+      ]
+    },
+    "tiger-secondary-battery": {
+      "asOf": "2025-03-31",
+      "sourceName": "미래에셋자산운용",
+      "sourceUrl": "https://www.tigeretf.com/upload/etf/20250408022813006556.pdf",
+      "holdings": [
+        {"ticker": "247540", "name": "에코프로비엠"},
+        {"ticker": "003670", "name": "포스코퓨처엠"},
+        {"ticker": "373220", "name": "LG에너지솔루션"},
+        {"ticker": "006400", "name": "삼성SDI"},
+        {"ticker": "051910", "name": "LG화학"}
+      ]
+    },
+    "lit": {
+      "asOf": "2026-07-15",
+      "sourceName": "Global X",
+      "sourceUrl": "https://www.globalxetfs.com/funds/LIT?download_full_holdings=true",
+      "holdings": [
+        {"ticker": "RIO", "name": "Rio Tinto", "weight": 21.54},
+        {"ticker": "002371", "name": "NAURA Technology", "weight": 7.24},
+        {"ticker": "6752", "name": "Panasonic Holdings", "weight": 6.50},
+        {"ticker": "6762", "name": "TDK", "weight": 5.76},
+        {"ticker": "ALB", "name": "Albemarle", "weight": 4.68}
+      ]
+    },
+    "kodex-internet": {
+      "asOf": "2026-06-02",
+      "totalHoldings": 21,
+      "sourceName": "삼성자산운용",
+      "sourceUrl": "https://www.samsungfund.com/etf/product/view.do?id=2ETF81",
+      "holdings": [
+        {"ticker": "035420", "name": "NAVER"},
+        {"ticker": "035720", "name": "카카오"},
+        {"ticker": "259960", "name": "크래프톤"},
+        {"ticker": "352820", "name": "하이브"},
+        {"ticker": "036570", "name": "엔씨소프트"}
+      ]
+    },
+    "qqq": {
+      "asOf": "2026-03-31",
+      "totalHoldings": 100,
+      "sourceName": "Invesco",
+      "sourceUrl": "https://www.invesco.com/qqq-etf/en/home.html",
+      "holdings": [
+        {"ticker": "NVDA", "name": "NVIDIA"},
+        {"ticker": "MSFT", "name": "Microsoft"},
+        {"ticker": "AAPL", "name": "Apple"},
+        {"ticker": "AMZN", "name": "Amazon"},
+        {"ticker": "AVGO", "name": "Broadcom"}
+      ]
+    },
+    "tiger-bio": {
+      "asOf": "2025-05-30",
+      "sourceName": "미래에셋자산운용",
+      "sourceUrl": "https://investments.miraeasset.com/tigeretf/upload/etf/20250611092530006303.pdf",
+      "holdings": [
+        {"ticker": "207940", "name": "삼성바이오로직스"},
+        {"ticker": "068270", "name": "셀트리온"},
+        {"ticker": "326030", "name": "SK바이오팜"},
+        {"ticker": "000100", "name": "유한양행"},
+        {"ticker": "128940", "name": "한미약품"}
+      ]
+    },
+    "xlv": {
+      "asOf": "2026-07-14",
+      "totalHoldings": 60,
+      "sourceName": "State Street",
+      "sourceUrl": "https://www.ssga.com/us/en/individual/etfs/state-street-health-care-select-sector-spdr-etf-xlv",
+      "holdings": [
+        {"ticker": "LLY", "name": "Eli Lilly", "weight": 15.93},
+        {"ticker": "JNJ", "name": "Johnson & Johnson", "weight": 10.68},
+        {"ticker": "ABBV", "name": "AbbVie", "weight": 7.51},
+        {"ticker": "UNH", "name": "UnitedHealth Group", "weight": 6.75},
+        {"ticker": "MRK", "name": "Merck", "weight": 5.21}
+      ]
+    },
+    "kodex-defense": {
+      "asOf": "2025-06",
+      "totalHoldings": 10,
+      "sourceName": "한화자산운용",
+      "sourceUrl": "https://www.plusetf.co.kr/upload/REPORT/PLUS%20ETF_%EC%97%B0%EA%B8%88%ED%88%AC%EC%9E%90_%EA%B0%80%EC%9D%B4%EB%93%9C%EB%B6%81_f.pdf",
+      "holdings": [
+        {"ticker": "012450", "name": "한화에어로스페이스", "weight": 25.3},
+        {"ticker": "064350", "name": "현대로템", "weight": 17.8},
+        {"ticker": "042660", "name": "한화오션", "weight": 17.5},
+        {"ticker": "047810", "name": "한국항공우주", "weight": 14.2},
+        {"ticker": "079550", "name": "LIG넥스원", "weight": 10.6}
+      ]
+    },
+    "ita": {
+      "asOf": "2026-07-14",
+      "totalHoldings": 49,
+      "sourceName": "iShares",
+      "sourceUrl": "https://www.ishares.com/us/products/239502/ishares-us-aerospace-defense-etf",
+      "holdings": [
+        {"ticker": "RTX", "name": "RTX"},
+        {"ticker": "GE", "name": "GE Aerospace"},
+        {"ticker": "BA", "name": "Boeing"},
+        {"ticker": "GD", "name": "General Dynamics"},
+        {"ticker": "LMT", "name": "Lockheed Martin"}
+      ]
+    },
+    "kodex-bank": {
+      "asOf": "2026-06-26",
+      "sourceName": "삼성자산운용",
+      "sourceUrl": "https://www.samsungfund.com/etf/product/view.do?id=2ETF08",
+      "holdings": [
+        {"ticker": "105560", "name": "KB금융"},
+        {"ticker": "055550", "name": "신한지주"},
+        {"ticker": "086790", "name": "하나금융지주"},
+        {"ticker": "316140", "name": "우리금융지주"},
+        {"ticker": "323410", "name": "카카오뱅크"}
+      ]
+    },
+    "xlf": {
+      "asOf": "2026-07-14",
+      "totalHoldings": 76,
+      "sourceName": "State Street",
+      "sourceUrl": "https://www.ssga.com/us/en/institutional/etfs/state-street-financial-select-sector-spdr-etf-xlf",
+      "holdings": [
+        {"ticker": "JPM", "name": "JPMorgan Chase", "weight": 11.57},
+        {"ticker": "BRK.B", "name": "Berkshire Hathaway", "weight": 11.34},
+        {"ticker": "V", "name": "Visa", "weight": 7.44},
+        {"ticker": "MA", "name": "Mastercard", "weight": 5.47},
+        {"ticker": "BAC", "name": "Bank of America", "weight": 4.98}
+      ]
+    }
+  }
+}

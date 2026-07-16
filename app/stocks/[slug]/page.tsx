@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ComparisonDashboard } from "./ComparisonDashboard";
 import { DomesticPeerSection } from "@/components/DomesticPeerSection";
+import { EtfHoldingsSection } from "@/components/EtfHoldingsSection";
+import { GlobalPeerEtfSection } from "@/components/GlobalPeerEtfSection";
 import { assets, getAlternatives, getAsset, snapshotMeta } from "@/lib/data/catalog";
 import { getKoreanStockMaster, krxSnapshotMeta, type KoreanStockMasterRecord } from "@/lib/data/krx-master";
 
@@ -68,8 +70,13 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
       </section>
 
       {selected.market === "KR" && selected.type === "stock" && (
-        <DomesticPeerSection symbol={selected.ticker} />
+        <>
+          <DomesticPeerSection symbol={selected.ticker} />
+          <GlobalPeerEtfSection symbol={selected.ticker} />
+        </>
       )}
+
+      {selected.type === "etf" && <EtfHoldingsSection slug={selected.slug} />}
 
       {peers.length ? (
         <ComparisonDashboard selected={selected} alternatives={peers} fxAsOf={snapshotMeta.fxAsOf} />
@@ -135,20 +142,23 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
 
         <div className="pipeline-status">
           <p className="eyebrow">DATA PIPELINE STATUS</p>
-          <h2>전체 검색과 연간 사업 비교 데이터가 연결됐습니다</h2>
+          <h2>국내외 peer와 관련 ETF까지 자동 연결됐습니다</h2>
           <p>
-            최신 연간 사업보고서와 KRX 업종·주요 제품을 사용해 국내 유사 종목을 계산합니다.
-            데이터가 부족한 종목은 제한 상태와 이유를 표시합니다.
+            최신 연간 사업보고서와 KRX 업종·주요 제품으로 국내 유사 종목을 계산하고,
+            설명 가능한 테마 규칙으로 글로벌 peer와 ETF 후보를 연결합니다.
           </p>
           <ol>
             <li className="done"><span>01</span><strong>한국 상장 종목 검색</strong><small>완료</small></li>
             <li className="done"><span>02</span><strong>DART 연간 사업 내용</strong><small>완료</small></li>
             <li className="done"><span>03</span><strong>자동 국내 유사 종목</strong><small>완료</small></li>
+            <li className="done"><span>04</span><strong>글로벌 peer 규칙 연결</strong><small>완료</small></li>
+            <li className="done"><span>05</span><strong>관련 ETF·구성 종목</strong><small>완료</small></li>
           </ol>
         </div>
       </section>
 
       <DomesticPeerSection symbol={stock.symbol} />
+      <GlobalPeerEtfSection symbol={stock.symbol} />
 
       <footer className="site-footer shell">
         <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>
