@@ -40,6 +40,7 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/private/
 /data/generated/dart_business.json
 /data/generated/dart_business.json.gz
 /.venv/
