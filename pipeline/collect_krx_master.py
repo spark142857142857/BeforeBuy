@@ -66,8 +66,10 @@ def normalize(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "symbol": symbol,
                 "name": name,
                 "market": market,
-                "sector": text(first_existing(row, "Sector")),
+                "sector": text(first_existing(row, "Industry")),
                 "industry": text(first_existing(row, "Industry")),
+                "products": text(first_existing(row, "Products")),
+                "marketSegment": text(first_existing(row, "MarketSegment")),
                 "isin": text(first_existing(row, "ISU_CD", "ISIN")),
                 "listingDate": iso_date(first_existing(row, "ListingDate")),
                 "securityType": security_type(name),
@@ -92,6 +94,8 @@ def validate(records: list[dict[str, Any]]) -> None:
         raise RuntimeError("Samsung Electronics (005930) is missing")
     if any(not re.fullmatch(r"[0-9A-Z]{6}", symbol) for symbol in symbols):
         raise RuntimeError("Invalid Korean stock symbol detected")
+    if sum(bool(record["industry"]) for record in records) < 2_500:
+        raise RuntimeError("KRX descriptive industry coverage is unexpectedly low")
 
 
 def write_snapshot(records: list[dict[str, Any]], output: Path) -> None:
@@ -102,9 +106,9 @@ def write_snapshot(records: list[dict[str, Any]], output: Path) -> None:
     }
     counts["total"] = len(records)
     payload = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "asOf": today,
-        "source": "FinanceDataReader.StockListing(KRX)",
+        "source": "FinanceDataReader.StockListing(KRX + KRX-DESC)",
         "counts": counts,
         "stocks": records,
     }
@@ -124,6 +128,17 @@ def main() -> None:
     args = parser.parse_args()
 
     frame = fdr.StockListing("KRX")
+    descriptions = fdr.StockListing("KRX-DESC").rename(columns={"Sector": "MarketSegment"})
+    descriptive_columns = [
+        column
+        for column in ("Code", "MarketSegment", "Industry", "Products", "ListingDate", "HomePage", "Region")
+        if column in descriptions.columns
+    ]
+    frame = frame.merge(
+        descriptions[descriptive_columns].drop_duplicates(subset="Code"),
+        how="left",
+        on="Code",
+    )
     records = normalize(frame)
     validate(records)
     write_snapshot(records, args.output)

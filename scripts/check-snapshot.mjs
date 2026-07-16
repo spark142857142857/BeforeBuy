@@ -20,6 +20,9 @@ if (!krx.stocks.some((stock) => stock.symbol === "005930" && stock.name === "삼
 if (new Set(krx.stocks.map((stock) => stock.symbol)).size !== krx.stocks.length) {
   throw new Error("KRX master contains duplicate symbols");
 }
+if (krx.stocks.filter((stock) => stock.industry).length < 2500) {
+  throw new Error("KRX master industry coverage is unexpectedly low");
+}
 if (dartCorp.counts.listedStocks !== krx.counts.total) {
   throw new Error("DART corporation mapping does not match the KRX master size");
 }

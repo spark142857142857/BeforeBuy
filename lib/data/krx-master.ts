@@ -7,6 +7,8 @@ export type KoreanStockMasterRecord = {
   market: "KOSPI" | "KOSDAQ" | "KONEX";
   sector: string;
   industry: string;
+  products: string;
+  marketSegment: string;
   isin: string;
   listingDate: string | null;
   securityType: "common" | "preferred" | "reit" | "spac";
@@ -55,7 +57,11 @@ function rank(record: KoreanStockMasterRecord, query: string) {
   if (symbol === query || name === query) return 0;
   if (symbol.startsWith(query) || name.startsWith(query)) return 1;
   if (name.includes(query)) return 2;
-  if (normalized(record.sector).includes(query) || normalized(record.industry).includes(query)) return 3;
+  if (
+    normalized(record.sector).includes(query) ||
+    normalized(record.industry).includes(query) ||
+    normalized(record.products).includes(query)
+  ) return 3;
   return 9;
 }
 
