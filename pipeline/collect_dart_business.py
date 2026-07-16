@@ -4,6 +4,8 @@ import argparse
 import gzip
 import json
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -79,6 +81,7 @@ def collect_business(
     *,
     refresh: bool = False,
     checkpoint_every: int = 100,
+    workers: int = 3,
 ) -> dict[str, Any]:
     previous = read_json(output, {"companies": {}})
     companies = dict(previous.get("companies", {}))
@@ -96,50 +99,65 @@ def collect_business(
             "companies": companies,
         }
 
-    for index, symbol in enumerate(symbols, start=1):
-        if not refresh and companies.get(symbol, {}).get("status") == "ok":
-            print(f"[{index}/{len(symbols)}] {symbol}: cached")
-            continue
-
+    def collect_one(worker_client: DartClient, symbol: str) -> dict[str, Any]:
         corp = corp_map["companies"].get(symbol)
         if not corp:
-            companies[symbol] = {"status": "unmapped", "updatedAt": date.today().isoformat()}
-        else:
-            try:
-                report = client.latest_regular_report(corp["corpCode"])
-                if not report:
-                    companies[symbol] = {
-                        "corpCode": corp["corpCode"],
-                        "corpName": corp["corpName"],
-                        "status": "no_regular_report",
-                        "updatedAt": date.today().isoformat(),
-                    }
-                else:
-                    receipt = str(report["rcept_no"])
-                    text = extract_business_section(client.document_files(receipt))
-                    companies[symbol] = {
-                        "corpCode": corp["corpCode"],
-                        "corpName": corp["corpName"],
-                        "reportName": report.get("report_nm", ""),
-                        "receiptNo": receipt,
-                        "receiptDate": report.get("rcept_dt", ""),
-                        "sourceUrl": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={receipt}",
-                        "text": text,
-                        "status": "ok" if text else "section_not_found",
-                        "updatedAt": date.today().isoformat(),
-                    }
-            except (DartError, OSError, ValueError) as error:
-                companies[symbol] = {
+            return {"status": "unmapped", "updatedAt": date.today().isoformat()}
+        try:
+            report = worker_client.latest_regular_report(corp["corpCode"])
+            if not report:
+                return {
                     "corpCode": corp["corpCode"],
                     "corpName": corp["corpName"],
-                    "status": "error",
-                    "error": str(error)[:300],
+                    "status": "no_regular_report",
                     "updatedAt": date.today().isoformat(),
                 }
+            receipt = str(report["rcept_no"])
+            text = extract_business_section(worker_client.document_files(receipt))
+            return {
+                "corpCode": corp["corpCode"],
+                "corpName": corp["corpName"],
+                "reportName": report.get("report_nm", ""),
+                "receiptNo": receipt,
+                "receiptDate": report.get("rcept_dt", ""),
+                "sourceUrl": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={receipt}",
+                "text": text,
+                "status": "ok" if text else "section_not_found",
+                "updatedAt": date.today().isoformat(),
+            }
+        except (DartError, OSError, ValueError) as error:
+            return {
+                "corpCode": corp["corpCode"],
+                "corpName": corp["corpName"],
+                "status": "error",
+                "error": str(error)[:300],
+                "updatedAt": date.today().isoformat(),
+            }
 
-        print(f"[{index}/{len(symbols)}] {symbol}: {companies[symbol]['status']}")
-        if index % checkpoint_every == 0:
-            write_json(output, payload())
+    pending = [
+        symbol
+        for symbol in symbols
+        if refresh or companies.get(symbol, {}).get("status") != "ok"
+    ]
+    cached = len(symbols) - len(pending)
+    if cached:
+        print(f"Skipping {cached} successful cached companies")
+
+    local = threading.local()
+
+    def collect_with_thread_client(symbol: str) -> tuple[str, dict[str, Any]]:
+        if not hasattr(local, "client"):
+            local.client = DartClient(client.api_key, delay=client.delay)
+        return symbol, collect_one(local.client, symbol)
+
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
+        futures = [executor.submit(collect_with_thread_client, symbol) for symbol in pending]
+        for index, future in enumerate(as_completed(futures), start=1):
+            symbol, company = future.result()
+            companies[symbol] = company
+            print(f"[{index}/{len(pending)}] {symbol}: {company['status']}")
+            if index % checkpoint_every == 0:
+                write_json(output, payload())
 
     result = payload()
     write_json(output, result)
@@ -154,6 +172,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=BUSINESS_OUTPUT)
     parser.add_argument("--refresh", action="store_true", help="Re-download successful records")
     parser.add_argument("--checkpoint-every", type=int, default=100)
+    parser.add_argument("--workers", type=int, default=3)
     args = parser.parse_args()
 
     load_dotenv(ROOT / ".env.local")
@@ -179,6 +198,7 @@ def main() -> None:
         args.output,
         refresh=args.refresh,
         checkpoint_every=max(1, args.checkpoint_every),
+        workers=max(1, args.workers),
     )
 
 

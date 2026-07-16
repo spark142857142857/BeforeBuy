@@ -20,7 +20,7 @@ uv run python pipeline/collect_dart_business.py --corp-codes-only
 # 소수 종목으로 원문 추출 검증
 uv run python pipeline/collect_dart_business.py --symbols 005930,000020,035420 --output work/dart_sample.json
 
-# 전체 수집은 100종목마다 압축 체크포인트를 유지하며 순차 실행
+# 전체 수집은 3개 작업으로 제한하고 100종목마다 압축 체크포인트 저장
 uv run python pipeline/collect_dart_business.py
 ```
 
