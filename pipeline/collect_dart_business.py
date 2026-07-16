@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 CORP_OUTPUT = ROOT / "data" / "generated" / "dart_corp_codes.json"
 BUSINESS_OUTPUT = ROOT / "data" / "generated" / "dart_business.json.gz"
+LOW_CONFIDENCE_TEXT_CHARS = 3_000
 
 
 def read_json(path: Path, default: Any) -> Any:
@@ -42,6 +43,10 @@ def write_json(path: Path, payload: Any) -> None:
             encoding="utf-8",
         )
     temporary.replace(path)
+
+
+def text_confidence(text: str) -> str:
+    return "low" if len(text) < LOW_CONFIDENCE_TEXT_CHARS else "standard"
 
 
 def build_corp_map(client: DartClient) -> dict[str, Any]:
@@ -153,6 +158,8 @@ def collect_business(
                     "sourceUrl": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={receipt}",
                     "fallbackCount": fallback_count,
                     "text": text,
+                    "textLength": len(text),
+                    "textConfidence": text_confidence(text),
                     "status": "ok",
                     "updatedAt": date.today().isoformat(),
                 }
