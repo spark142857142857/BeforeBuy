@@ -20,8 +20,10 @@ uv run python pipeline/collect_dart_business.py --corp-codes-only
 # 소수 종목으로 원문 추출 검증
 uv run python pipeline/collect_dart_business.py --symbols 005930,000020,035420 --output work/dart_sample.json
 
-# 전체 수집은 체크포인트 JSON을 유지하며 순차 실행
+# 전체 수집은 100종목마다 압축 체크포인트를 유지하며 순차 실행
 uv run python pipeline/collect_dart_business.py
 ```
 
 사업 내용은 최근 정기보고서 원문에서 `II. 사업의 내용` 구간만 추출합니다.
+전체 결과는 `data/generated/dart_business.json.gz`에 저장하며, 다시 실행하면
+이미 성공한 종목은 건너뛰고 실패하거나 미수집된 종목만 이어서 수집합니다.

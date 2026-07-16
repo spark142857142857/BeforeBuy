@@ -13,7 +13,8 @@
     "data:check": "node scripts/check-snapshot.mjs",
     "data:krx": "uv run python pipeline/collect_krx_master.py",
     "data:dart:map": "uv run python pipeline/collect_dart_business.py --corp-codes-only",
-    "data:dart:sample": "uv run python pipeline/collect_dart_business.py --symbols 005930,000020,035420 --output work/dart_sample.json",
+    "data:dart:sample": "uv run python pipeline/collect_dart_business.py --symbols \"005930,000020,035420\" --output work/dart_sample.json",
+    "data:dart": "uv run python pipeline/collect_dart_business.py",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern outputs --ignore-pattern work --ignore-pattern .venv --ignore-pattern data",
     "db:generate": "drizzle-kit generate"
   },

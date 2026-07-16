@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import os
 from datetime import date
@@ -15,20 +16,29 @@ from dart_client import DartClient, DartError, extract_business_section
 ROOT = Path(__file__).resolve().parents[1]
 MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 CORP_OUTPUT = ROOT / "data" / "generated" / "dart_corp_codes.json"
-BUSINESS_OUTPUT = ROOT / "data" / "generated" / "dart_business.json"
+BUSINESS_OUTPUT = ROOT / "data" / "generated" / "dart_business.json.gz"
 
 
 def read_json(path: Path, default: Any) -> Any:
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else default
+    if not path.exists():
+        return default
+    if path.suffix == ".gz":
+        with gzip.open(path, "rt", encoding="utf-8") as file:
+            return json.load(file)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
-    temporary.write_text(
-        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
+    if path.suffix == ".gz":
+        with gzip.open(temporary, "wt", encoding="utf-8", compresslevel=6) as file:
+            json.dump(payload, file, ensure_ascii=False, separators=(",", ":"))
+    else:
+        temporary.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
     temporary.replace(path)
 
 
@@ -68,7 +78,7 @@ def collect_business(
     output: Path,
     *,
     refresh: bool = False,
-    checkpoint_every: int = 10,
+    checkpoint_every: int = 100,
 ) -> dict[str, Any]:
     previous = read_json(output, {"companies": {}})
     companies = dict(previous.get("companies", {}))
@@ -143,6 +153,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--output", type=Path, default=BUSINESS_OUTPUT)
     parser.add_argument("--refresh", action="store_true", help="Re-download successful records")
+    parser.add_argument("--checkpoint-every", type=int, default=100)
     args = parser.parse_args()
 
     load_dotenv(ROOT / ".env.local")
@@ -161,7 +172,14 @@ def main() -> None:
         symbols = available
     if args.limit:
         symbols = symbols[: args.limit]
-    collect_business(client, corp_map, symbols, args.output, refresh=args.refresh)
+    collect_business(
+        client,
+        corp_map,
+        symbols,
+        args.output,
+        refresh=args.refresh,
+        checkpoint_every=max(1, args.checkpoint_every),
+    )
 
 
 if __name__ == "__main__":
