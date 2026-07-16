@@ -12,7 +12,7 @@ from build_similarity import build_similarity  # noqa: E402
 
 
 class SimilarityPipelineTest(unittest.TestCase):
-    def test_same_industry_and_business_rank_first_without_llm(self) -> None:
+    def test_shared_business_exposures_rank_first_without_llm(self) -> None:
         master = {
             "stocks": [
                 {
@@ -55,8 +55,9 @@ class SimilarityPipelineTest(unittest.TestCase):
         result = build_similarity(master, business, top_k=2, min_companies=3)
 
         self.assertEqual(result["similar"]["000001"][0]["symbol"], "000002")
-        self.assertEqual(result["similar"]["000001"][0]["industrySimilarity"], 1.0)
+        self.assertGreater(result["similar"]["000001"][0]["exposureSimilarity"], 0.7)
         self.assertGreater(result["similar"]["000001"][0]["productSimilarity"], 0)
+        self.assertIn("메모리 반도체", result["similar"]["000001"][0]["sharedExposures"])
         self.assertTrue(result["similar"]["000001"][0]["sharedTerms"])
         self.assertFalse(result["method"]["llmUsed"])
 

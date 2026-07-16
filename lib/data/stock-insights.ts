@@ -32,8 +32,9 @@ type SimilarityCandidate = {
   symbol: string;
   score: number;
   textSimilarity: number;
-  industrySimilarity: number;
+  exposureSimilarity: number;
   productSimilarity: number;
+  sharedExposures: string[];
   sharedTerms: string[];
   confidence?: "low";
 };
@@ -55,17 +56,22 @@ export type DomesticPeer = SimilarityCandidate & {
   stock: KoreanStockMasterRecord;
   slug: string;
   reason: string;
+  scaleSimilarity: number;
 };
 
-function reasonFor(candidate: SimilarityCandidate, selected: KoreanStockMasterRecord) {
+function scaleSimilarity(left: KoreanStockMasterRecord, right: KoreanStockMasterRecord) {
+  if (left.marketCap <= 0 || right.marketCap <= 0) return 0;
+  const ratio = Math.min(left.marketCap, right.marketCap) / Math.max(left.marketCap, right.marketCap);
+  return ratio ** 0.25;
+}
+
+function reasonFor(candidate: SimilarityCandidate) {
   const reasons = [];
-  if (candidate.industrySimilarity === 1) {
-    reasons.push(`동일 KRX 업종(${selected.industry})`);
-  } else if (candidate.industrySimilarity > 0) {
-    reasons.push("업종 설명 일부 공통");
+  if (candidate.sharedExposures.length) {
+    reasons.push(`공통 사업 노출 ${candidate.sharedExposures.join(", ")}`);
   }
   if (candidate.sharedTerms.length) {
-    reasons.push(`공통 키워드 ${candidate.sharedTerms.join(", ")}`);
+    reasons.push(`공통 제품 키워드 ${candidate.sharedTerms.join(", ")}`);
   }
   if (!reasons.length) reasons.push("연간 사업보고서의 사업 내용이 유사");
   return reasons.join(" · ");
@@ -88,7 +94,8 @@ export function getDomesticStockInsight(symbol: string, limit = 5) {
         ...candidate,
         stock,
         slug: result.slug,
-        reason: reasonFor(candidate, selected),
+        reason: reasonFor(candidate),
+        scaleSimilarity: scaleSimilarity(selected, stock),
       };
     })
     .filter((item): item is DomesticPeer => Boolean(item));

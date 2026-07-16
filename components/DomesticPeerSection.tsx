@@ -24,7 +24,7 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
             <p className="eyebrow">ANNUAL BUSINESS PROFILE</p>
             <h2>연간 사업보고서 기반 국내 비교</h2>
           </div>
-          <p>LLM 없이 사업 본문·업종·주요 제품을 로컬에서 계산했습니다.</p>
+          <p>LLM 없이 사업 본문·다중 사업 노출·주요 제품·기업 규모를 로컬에서 계산했습니다.</p>
         </div>
 
         {insight.isAlias && businessStock && (
@@ -70,9 +70,10 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
                   <p className="peer-symbol">{peer.symbol} · {peer.stock.industry || "업종 정보 없음"}</p>
                   <p className="peer-reason">{peer.reason}</p>
                   <div className="peer-score-row">
-                    <span>사업 {score(peer.textSimilarity)}</span>
-                    <span>업종 {score(peer.industrySimilarity)}</span>
+                    <span>본문 {score(peer.textSimilarity)}</span>
+                    <span>사업 노출 {score(peer.exposureSimilarity)}</span>
                     <span>제품 {score(peer.productSimilarity)}</span>
+                    <span>규모 {score(peer.scaleSimilarity)}</span>
                   </div>
                   <Link href={`/stocks/${peer.slug}`}>상세 보기 →</Link>
                 </article>

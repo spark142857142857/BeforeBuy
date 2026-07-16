@@ -49,6 +49,9 @@ if (profiles.aliases["005935"] !== "005930") {
 if (similarity.method.reportType !== "annual" || similarity.method.llmUsed !== false) {
   throw new Error("Similarity method must use annual reports without an LLM");
 }
+if (similarity.method.industryExactMatchUsed !== false || !similarity.method.standardWeights.businessExposures) {
+  throw new Error("Similarity method must use multi-label business exposures instead of exact KRX industry matching");
+}
 if (similarity.counts.companies < 2500 || similarity.counts.recommendations < 25000) {
   throw new Error(`Similarity coverage is unexpectedly low: ${JSON.stringify(similarity.counts)}`);
 }
@@ -57,6 +60,21 @@ if (!similarity.similar["005380"]?.some((candidate) => candidate.symbol === "000
 }
 if (!similarity.similar["035420"]?.some((candidate) => candidate.symbol === "035720")) {
   throw new Error("NAVER similarity results do not include Kakao");
+}
+if (similarity.similar["005930"]?.[0]?.symbol !== "000660") {
+  throw new Error("Samsung Electronics must rank SK hynix first");
+}
+if (similarity.similar["000660"]?.[0]?.symbol !== "005930") {
+  throw new Error("SK hynix must rank Samsung Electronics first");
+}
+if (similarity.similar["005380"]?.[0]?.symbol !== "000270") {
+  throw new Error("Hyundai Motor must rank Kia first");
+}
+if (similarity.similar["035420"]?.[0]?.symbol !== "035720") {
+  throw new Error("NAVER must rank Kakao first");
+}
+if (similarity.similar["373220"]?.[0]?.symbol !== "006400") {
+  throw new Error("LG Energy Solution must rank Samsung SDI first");
 }
 if (globalLinks.method.llmUsed !== false || globalLinks.counts.mappedStocks < 400) {
   throw new Error(`Global link coverage or method is invalid: ${JSON.stringify(globalLinks.counts)}`);
