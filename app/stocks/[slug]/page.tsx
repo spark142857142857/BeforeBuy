@@ -5,6 +5,7 @@ import { ComparisonDashboard } from "./ComparisonDashboard";
 import { DomesticPeerSection } from "@/components/DomesticPeerSection";
 import { EtfHoldingsSection } from "@/components/EtfHoldingsSection";
 import { GlobalPeerEtfSection } from "@/components/GlobalPeerEtfSection";
+import { StockEtfComparisonSection } from "@/components/StockEtfComparisonSection";
 import { assets, getAlternatives, getAsset, snapshotMeta } from "@/lib/data/catalog";
 import { getKoreanStockMaster, krxSnapshotMeta, type KoreanStockMasterRecord } from "@/lib/data/krx-master";
 
@@ -73,6 +74,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
         <>
           <DomesticPeerSection symbol={selected.ticker} />
           <GlobalPeerEtfSection symbol={selected.ticker} />
+          <StockEtfComparisonSection symbol={selected.ticker} />
         </>
       )}
 
@@ -153,12 +155,14 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
             <li className="done"><span>03</span><strong>자동 국내 유사 종목</strong><small>완료</small></li>
             <li className="done"><span>04</span><strong>글로벌 peer 규칙 연결</strong><small>완료</small></li>
             <li className="done"><span>05</span><strong>관련 ETF·구성 종목</strong><small>완료</small></li>
+            <li className="done"><span>06</span><strong>개별 종목 vs ETF</strong><small>완료</small></li>
           </ol>
         </div>
       </section>
 
       <DomesticPeerSection symbol={stock.symbol} />
       <GlobalPeerEtfSection symbol={stock.symbol} />
+      <StockEtfComparisonSection symbol={stock.symbol} />
 
       <footer className="site-footer shell">
         <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>

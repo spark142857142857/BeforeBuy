@@ -42,6 +42,10 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.match(html, /국내외 대안으로 범위 넓히기/);
   assert.match(html, /일라이 릴리/);
   assert.match(html, /TIGER 200 헬스케어/);
+  assert.match(html, /개별 종목과 ETF 직접 비교/);
+  assert.match(html, /동화약품/);
+  assert.match(html, /자체에 100% 직접 노출/);
+  assert.match(html, /표시된 주요 5개에는 없음/);
 });
 
 test("Samsung detail includes global peers, ETFs and explanations", async () => {
@@ -54,6 +58,10 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   assert.match(html, /KODEX 반도체/);
   assert.match(html, /메모리·AI 반도체/);
   assert.match(html, /주요 구성 종목/);
+  assert.match(html, /삼성전자/);
+  assert.match(html, /자체에 100% 직접 노출/);
+  assert.match(html, /주요 구성 종목에 17\.60% 포함/);
+  assert.match(html, /1년 수익률/);
   assert.match(html, /공통점과 결정 전 차이/);
   assert.match(html, /2026-07-15/);
   assert.match(html, /원화 수익률/);

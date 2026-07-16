@@ -227,6 +227,12 @@ export function getAsset(slug: string) {
   return assets.find((item) => item.slug === slug);
 }
 
+export function getAssetByTicker(ticker: string, market?: Market) {
+  return assets.find(
+    (item) => item.ticker === ticker && (!market || item.market === market),
+  );
+}
+
 export function getAlternatives(slug: string) {
   return (alternatives[slug] ?? [])
     .map((relation) => ({ ...relation, asset: getAsset(relation.slug) }))
