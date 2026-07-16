@@ -179,6 +179,8 @@ flowchart TD
 
 웹 화면은 실시간 외부 API를 직접 호출하지 않고, 로컬 배치가 만든 버전 관리 가능한 스냅샷을 읽습니다. 데이터 공급자를 교체할 수 있도록 수집 계층과 화면 계층을 분리했습니다.
 
+DART 전체 원문 압축 파일은 로컬 배치 캐시로만 사용하며 GitHub에는 포함하지 않습니다. 웹에는 짧은 사업 프로필, 계산된 지표, 상위 유사 후보만 저장합니다.
+
 ## 기술 스택
 
 | 구분 | 기술 | 역할 |
@@ -205,7 +207,7 @@ stock-alternative-explorer/
 ├── components/
 │   ├── SearchExplorer.tsx
 │   └── IndustryMap.tsx
-├── data/generated/            # 버전 관리되는 데이터 스냅샷
+├── data/generated/            # 웹용 스냅샷과 로컬 배치 캐시
 ├── lib/data/
 │   ├── catalog.ts             # 큐레이션 자산과 비교 관계
 │   ├── krx-master.ts          # 전체 종목 검색 계층

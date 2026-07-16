@@ -41,6 +41,7 @@ next-env.d.ts
 /outputs/
 /work/
 /data/generated/dart_business.json
+/data/generated/dart_business.json.gz
 /.venv/
 __pycache__/
 *.pyc
