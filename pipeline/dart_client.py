@@ -16,7 +16,9 @@ from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 
 
 DART_BASE = "https://opendart.fss.or.kr/api"
-REGULAR_REPORT = re.compile(r"(사업보고서|반기보고서|분기보고서)")
+ANNUAL_REPORT = re.compile(r"사업보고서")
+REPORT_PERIOD = re.compile(r"\((\d{4})\.(\d{2})\)")
+ATTACHMENT_ONLY_MARKERS = ("[첨부정정]", "[첨부추가]")
 BUSINESS_START = re.compile(r"^(?:Ⅱ|II|2)[.\s]*사업의\s*내용", re.IGNORECASE)
 BUSINESS_END = re.compile(r"^(?:Ⅲ|III|3)[.\s]*(?:재무에\s*관한\s*사항|재무정보)", re.IGNORECASE)
 
@@ -32,6 +34,37 @@ class DartCorp:
 
 class DartError(RuntimeError):
     pass
+
+
+def report_period(report: dict[str, Any]) -> tuple[int, int]:
+    match = REPORT_PERIOD.search(str(report.get("report_nm", "")))
+    return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
+
+
+def annual_report_candidates(reports: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    eligible = [
+        report
+        for report in reports
+        if (
+            ANNUAL_REPORT.search(str(report.get("report_nm", "")))
+            and not any(
+                marker in str(report.get("report_nm", ""))
+                for marker in ATTACHMENT_ONLY_MARKERS
+            )
+        )
+    ]
+    ordered: list[dict[str, Any]] = []
+    for period in sorted({report_period(report) for report in eligible}, reverse=True):
+        same_period = [report for report in eligible if report_period(report) == period]
+        same_period.sort(
+            key=lambda report: (
+                0 if "[기재정정]" in str(report.get("report_nm", "")) else 1,
+                -int(str(report.get("rcept_dt", "0")) or "0"),
+                -int(str(report.get("rcept_no", "0")) or "0"),
+            )
+        )
+        ordered.extend(same_period)
+    return ordered
 
 
 class DartClient:
@@ -80,15 +113,14 @@ class DartClient:
             )
         return corps
 
-    def latest_regular_report(self, corp_code: str) -> dict[str, Any] | None:
-        begin = (date.today() - timedelta(days=550)).strftime("%Y%m%d")
+    def annual_reports(self, corp_code: str) -> list[dict[str, Any]]:
+        begin = (date.today() - timedelta(days=850)).strftime("%Y%m%d")
         response = self.session.get(
             f"{DART_BASE}/list.json",
             params={
                 "crtfc_key": self.api_key,
                 "corp_code": corp_code,
                 "bgn_de": begin,
-                "last_reprt_at": "Y",
                 "pblntf_ty": "A",
                 "sort": "date",
                 "sort_mth": "desc",
@@ -100,15 +132,11 @@ class DartClient:
         response.raise_for_status()
         payload = response.json()
         if payload.get("status") == "013":
-            return None
+            return []
         if payload.get("status") != "000":
             raise DartError(f"DART list failed: {payload.get('status')} {payload.get('message')}")
 
-        reports = [
-            report for report in payload.get("list", [])
-            if REGULAR_REPORT.search(str(report.get("report_nm", "")))
-        ]
-        return reports[0] if reports else None
+        return annual_report_candidates(payload.get("list", []))
 
     def document_files(self, receipt_no: str) -> list[tuple[str, bytes]]:
         response = self.session.get(
@@ -121,7 +149,14 @@ class DartClient:
         try:
             archive = zipfile.ZipFile(io.BytesIO(response.content))
         except zipfile.BadZipFile as error:
-            raise DartError(f"DART document {receipt_no} is not a ZIP file") from error
+            try:
+                root = ElementTree.fromstring(response.content)
+                status = (root.findtext("status") or "unknown").strip()
+                message = (root.findtext("message") or "not a ZIP file").strip()
+                detail = f"{status} {message}"
+            except ElementTree.ParseError:
+                detail = "not a ZIP file"
+            raise DartError(f"DART document {receipt_no} failed: {detail}") from error
         return [
             (name, archive.read(name))
             for name in archive.namelist()

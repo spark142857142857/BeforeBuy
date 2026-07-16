@@ -12,7 +12,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from dart_client import DartClient, DartError, extract_business_section
+from dart_client import DartClient, DartError, extract_business_section, report_period
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,9 +92,14 @@ def collect_business(
             status = company.get("status", "unknown")
             statuses[status] = statuses.get(status, 0) + 1
         return {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "asOf": date.today().isoformat(),
-            "source": "OpenDART regular report original documents",
+            "source": "OpenDART latest valid annual business reports",
+            "selectionPolicy": {
+                "reportType": "annual",
+                "prefer": "content-corrected then original",
+                "exclude": ["quarterly", "half-year", "attachment-corrected", "attachment-added"],
+            },
             "counts": {"total": len(companies), **statuses},
             "companies": companies,
         }
@@ -104,25 +109,58 @@ def collect_business(
         if not corp:
             return {"status": "unmapped", "updatedAt": date.today().isoformat()}
         try:
-            report = worker_client.latest_regular_report(corp["corpCode"])
-            if not report:
+            reports = worker_client.annual_reports(corp["corpCode"])
+            if not reports:
                 return {
                     "corpCode": corp["corpCode"],
                     "corpName": corp["corpName"],
-                    "status": "no_regular_report",
+                    "status": "no_annual_report",
                     "updatedAt": date.today().isoformat(),
                 }
-            receipt = str(report["rcept_no"])
-            text = extract_business_section(worker_client.document_files(receipt))
+            attempts = []
+            for fallback_count, report in enumerate(reports[:6]):
+                receipt = str(report["rcept_no"])
+                try:
+                    text = extract_business_section(worker_client.document_files(receipt))
+                except (DartError, OSError, ValueError) as error:
+                    attempts.append(
+                        {
+                            "receiptNo": receipt,
+                            "reportName": report.get("report_nm", ""),
+                            "result": str(error)[:180],
+                        }
+                    )
+                    continue
+                if not text:
+                    attempts.append(
+                        {
+                            "receiptNo": receipt,
+                            "reportName": report.get("report_nm", ""),
+                            "result": "business_section_not_found",
+                        }
+                    )
+                    continue
+
+                period_year, period_month = report_period(report)
+                return {
+                    "corpCode": corp["corpCode"],
+                    "corpName": corp["corpName"],
+                    "reportName": report.get("report_nm", ""),
+                    "reportType": "annual",
+                    "reportPeriod": f"{period_year:04d}.{period_month:02d}",
+                    "receiptNo": receipt,
+                    "receiptDate": report.get("rcept_dt", ""),
+                    "sourceUrl": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={receipt}",
+                    "fallbackCount": fallback_count,
+                    "text": text,
+                    "status": "ok",
+                    "updatedAt": date.today().isoformat(),
+                }
             return {
                 "corpCode": corp["corpCode"],
                 "corpName": corp["corpName"],
-                "reportName": report.get("report_nm", ""),
-                "receiptNo": receipt,
-                "receiptDate": report.get("rcept_dt", ""),
-                "sourceUrl": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={receipt}",
-                "text": text,
-                "status": "ok" if text else "section_not_found",
+                "status": "annual_report_unusable",
+                "attempts": attempts,
                 "updatedAt": date.today().isoformat(),
             }
         except (DartError, OSError, ValueError) as error:
@@ -165,7 +203,7 @@ def collect_business(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Collect DART corporation mapping and business sections")
+    parser = argparse.ArgumentParser(description="Collect DART corporation mapping and annual business sections")
     parser.add_argument("--corp-codes-only", action="store_true")
     parser.add_argument("--symbols", help="Comma-separated KRX symbols")
     parser.add_argument("--limit", type=int)
