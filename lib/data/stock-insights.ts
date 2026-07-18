@@ -73,7 +73,7 @@ function reasonFor(candidate: SimilarityCandidate) {
   if (candidate.sharedTerms.length) {
     reasons.push(`공통 제품 키워드 ${candidate.sharedTerms.join(", ")}`);
   }
-  if (!reasons.length) reasons.push("연간 사업보고서의 사업 내용이 유사");
+  if (!reasons.length) reasons.push("연간 사업보고서 본문 유사 · 정형 사업 노출 근거 부족");
   return reasons.join(" · ");
 }
 

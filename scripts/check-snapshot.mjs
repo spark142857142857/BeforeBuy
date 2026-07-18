@@ -52,8 +52,20 @@ if (similarity.method.reportType !== "annual" || similarity.method.llmUsed !== f
 if (similarity.method.industryExactMatchUsed !== false || !similarity.method.standardWeights.businessExposures) {
   throw new Error("Similarity method must use multi-label business exposures instead of exact KRX industry matching");
 }
+if (similarity.method.industrySoftPriorsUsed !== true) {
+  throw new Error("Similarity method must use soft KRX industry priors");
+}
+if (similarity.schemaVersion < 4) {
+  throw new Error("Similarity snapshot must use schemaVersion >= 4");
+}
+if (similarity.counts.companiesWithExposures < 2200) {
+  throw new Error(`Exposure coverage is unexpectedly low: ${similarity.counts.companiesWithExposures}`);
+}
 if (similarity.counts.companies < 2500 || similarity.counts.recommendations < 25000) {
   throw new Error(`Similarity coverage is unexpectedly low: ${JSON.stringify(similarity.counts)}`);
+}
+if (!similarity.counts.lowConfidenceRecommendations) {
+  throw new Error("Similarity snapshot must disclose recommendations with limited comparison evidence");
 }
 if (!similarity.similar["005380"]?.some((candidate) => candidate.symbol === "000270")) {
   throw new Error("Hyundai Motor similarity results do not include Kia");
@@ -75,6 +87,39 @@ if (similarity.similar["035420"]?.[0]?.symbol !== "035720") {
 }
 if (similarity.similar["373220"]?.[0]?.symbol !== "006400") {
   throw new Error("LG Energy Solution must rank Samsung SDI first");
+}
+if (!similarity.similar["373220"]?.[0]?.sharedExposures?.includes("2차전지 밸류체인")) {
+  throw new Error("Battery-cell peers must share the secondary-battery value-chain exposure");
+}
+if (similarity.similar["373220"]?.slice(0, 5).some((candidate) => !candidate.sharedExposures?.includes("배터리 셀 제조"))) {
+  throw new Error("LG Energy Solution top five must remain battery-cell manufacturers");
+}
+for (const symbol of ["393970", "446540", "241690", "493330", "047310", "452450"]) {
+  const candidate = similarity.similar["373220"]?.find((item) => item.symbol === symbol);
+  if (candidate?.sharedExposures?.includes("배터리 셀 제조")) {
+    throw new Error(`Battery material/parts/equipment stock is mislabeled as a cell manufacturer: ${symbol}`);
+  }
+}
+if (!similarity.similar["005930"]?.[0]?.sharedExposures?.includes("메모리 반도체")) {
+  throw new Error("Samsung Electronics top peer must share memory-semiconductor exposure");
+}
+if (!similarity.similar["207940"]?.some((candidate) => candidate.symbol === "068270")) {
+  throw new Error("Samsung Biologics must include Celltrion among domestic peers");
+}
+if (!similarity.similar["068270"]?.some((candidate) => candidate.symbol === "207940")) {
+  throw new Error("Celltrion must include Samsung Biologics among domestic peers");
+}
+if (similarity.similar["017670"]?.[0]?.symbol !== "030200" || similarity.similar["017670"]?.[1]?.symbol !== "032640") {
+  throw new Error("SK Telecom must rank KT and LG Uplus as its first two telecom-service peers");
+}
+if (!similarity.similar["105560"]?.slice(0, 3).some((candidate) => ["055550", "086790", "316140"].includes(candidate.symbol))) {
+  throw new Error("KB Financial must include a major financial holding company in its top three peers");
+}
+if (!similarity.similar["329180"]?.slice(0, 5).some((candidate) => candidate.symbol === "042660")) {
+  throw new Error("HD Hyundai Heavy Industries must include Hanwha Ocean in its top five peers");
+}
+if (!similarity.similar["090430"]?.slice(0, 3).some((candidate) => candidate.symbol === "051900")) {
+  throw new Error("Amorepacific must include LG Household & Health Care in its top three peers");
 }
 if (globalLinks.method.llmUsed !== false || globalLinks.counts.mappedStocks < 400) {
   throw new Error(`Global link coverage or method is invalid: ${JSON.stringify(globalLinks.counts)}`);

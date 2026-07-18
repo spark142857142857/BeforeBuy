@@ -88,6 +88,19 @@ def keyword_hits(value: str, keywords: list[str]) -> list[str]:
     return [keyword for keyword in keywords if keyword.lower() in lowered]
 
 
+def _merge_exposure(
+    exposures: dict[str, dict[str, Any]],
+    exposure_id: str,
+    label: str,
+    strength: int,
+) -> None:
+    if strength <= 0:
+        return
+    current = exposures.get(exposure_id)
+    if current is None or strength > int(current["strength"]):
+        exposures[exposure_id] = {"label": label, "strength": strength}
+
+
 def extract_business_exposures(
     stock: dict[str, Any],
     business: dict[str, Any],
@@ -102,27 +115,173 @@ def extract_business_exposures(
         rule["id"]: rule["label"]
         for rule in exposure_rules.get("rules", [])
     }
+    rules_by_id = {
+        rule["id"]: rule
+        for rule in exposure_rules.get("rules", [])
+    }
+    battery_context_cues = [
+        "2차전지",
+        "이차전지",
+        "배터리",
+        "축전지",
+        "리튬전지",
+    ]
+    equipment_cues = [
+        "장비",
+        "금형",
+        "설비",
+        "자동화",
+        "믹싱",
+        "검사시스템",
+        "충방전",
+        "포메이션",
+        "조립설비",
+        "자동화 설비",
+    ]
+    materials_cues = [
+        "양극",
+        "음극",
+        "전극",
+        "소재",
+        "전구체",
+        "전해액",
+        "분리막",
+        "코팅액",
+        "활물질",
+        "양극재료",
+        "음극재료",
+        "전지소재",
+        "전지 소재",
+        "동박",
+    ]
+    parts_cues = [
+        "부품",
+        "테이프",
+        "캡 어셈블리",
+        "cid",
+        "보호회로",
+        "배터리팩",
+        "배터리 팩",
+        "셀케이스",
+        "셀 케이스",
+        "배터리 핀",
+        "테스트 pin",
+        "트레이",
+        "필름",
+        "소화안전",
+        "안전제품",
+    ]
+
     for rule in exposure_rules.get("rules", []):
         keywords = rule.get("keywords", [])
+        # productKeywords는 KRX 주요 제품 필드 전용. DART 본문에는 일반 keywords만 사용합니다.
+        product_only_keywords = rule.get("productKeywords", [])
+        name_hits = keyword_hits(stock.get("name", ""), rule.get("nameKeywords", []))
         industry_hits = keyword_hits(industry, keywords)
-        product_hits = keyword_hits(products, keywords)
+        product_hits = keyword_hits(products, keywords + product_only_keywords)
         business_hits = keyword_hits(business_text, keywords)
         minimum_business_hits = int(rule.get("minBusinessHits", 2))
         business_only_match = (
             bool(rule.get("allowBusinessOnly"))
             and len(business_hits) >= minimum_business_hits
         )
-        if not industry_hits and not product_hits and not business_only_match:
+        if not name_hits and not industry_hits and not product_hits and not business_only_match:
             continue
         strength = (
-            (3 if industry_hits else 0)
+            (2 if name_hits else 0)
+            + (3 if industry_hits else 0)
             + (2 if product_hits else 0)
             + min(2, len(business_hits))
         )
-        exposures[rule["id"]] = {
-            "label": rule["label"],
-            "strength": strength,
+        _merge_exposure(exposures, rule["id"], rule["label"], strength)
+
+    for exposure_id, strength in (
+        exposure_rules.get("industryPriors", {}).get(industry, {}) or {}
+    ).items():
+        if exposure_id not in labels:
+            continue
+        _merge_exposure(exposures, exposure_id, labels[exposure_id], int(strength))
+
+    # 2차전지 관련성(밸류체인)과 실제 역할(셀·소재·부품·장비)을 분리합니다.
+    product_has_battery_context = bool(
+        keyword_hits(products, battery_context_cues)
+    )
+    business_has_battery_context = bool(
+        keyword_hits(business_text, battery_context_cues)
+    )
+    exact_battery_industry = industry == "일차전지 및 이차전지 제조업"
+    cell_product_evidence = keyword_hits(
+        products,
+        [
+            "자동차전지",
+            "리튬이온전지",
+            "리튬이온 전지",
+            "전고체 배터리",
+            "원통형 전지",
+            "파우치형 전지",
+            "각형 전지",
+            "축전지",
+            "밧데리",
+        ],
+    )
+    generic_cell_product = bool(
+        exact_battery_industry
+        and keyword_hits(products, ["2차전지", "이차전지"])
+    )
+
+    product_equipment = product_has_battery_context and bool(
+        keyword_hits(products, equipment_cues)
+    )
+    product_parts = product_has_battery_context and bool(
+        keyword_hits(products, parts_cues)
+    )
+    product_materials = product_has_battery_context and bool(
+        keyword_hits(products, materials_cues)
+    )
+    business_equipment = bool(
+        "기계" in industry
+        and keyword_hits(
+            business_text,
+            rules_by_id["battery-equipment"].get("keywords", []),
+        )
+    )
+
+    battery_role: str | None = None
+    if product_equipment or business_equipment:
+        battery_role = "battery-equipment"
+    elif product_materials:
+        battery_role = "battery-materials"
+    elif product_parts:
+        battery_role = "battery-parts"
+    elif cell_product_evidence or generic_cell_product:
+        battery_role = "battery-cell"
+
+    for role in (
+        "battery-cell",
+        "battery-materials",
+        "battery-parts",
+        "battery-equipment",
+    ):
+        if role != battery_role:
+            exposures.pop(role, None)
+    if battery_role:
+        _merge_exposure(exposures, battery_role, labels[battery_role], 4)
+
+    battery_related = bool(
+        battery_role
+        or product_has_battery_context
+        or exact_battery_industry
+        or business_equipment
+        or "battery-value-chain" in exposures
+    )
+    if battery_related:
+        exposures["battery-value-chain"] = {
+            "label": labels["battery-value-chain"],
+            "strength": 1,
         }
+    else:
+        exposures.pop("battery-value-chain", None)
+
     override = exposure_rules.get("reviewedOverrides", {}).get(stock["symbol"])
     if override:
         exposures = {
@@ -149,7 +308,11 @@ def business_exposure_similarity(
     )
     left_weight = sum(item["strength"] for item in left.values())
     right_weight = sum(item["strength"] for item in right.values())
-    containment = shared_weight / min(left_weight, right_weight)
+    if left_weight <= 0 or right_weight <= 0:
+        return 0.0, []
+    # min(left,right) containment는 태그 1개 순수기업에 점수가 과도하게 붙습니다.
+    left_containment = shared_weight / left_weight
+    right_containment = shared_weight / right_weight
     union_weight = sum(
         max(
             left.get(tag, {}).get("strength", 0),
@@ -158,7 +321,7 @@ def business_exposure_similarity(
         for tag in set(left) | set(right)
     )
     weighted_jaccard = shared_weight / union_weight if union_weight else 0.0
-    score = containment * 0.7 + weighted_jaccard * 0.3
+    score = left_containment * 0.4 + right_containment * 0.3 + weighted_jaccard * 0.3
     labels = [
         left[tag]["label"]
         for tag in sorted(
@@ -258,12 +421,31 @@ def build_similarity(
         candidate_indices = set(text_neighbor_scores)
         for exposure in exposures_by_symbol[stock["symbol"]]:
             matches = exposure_indices.get(exposure, set())
-            if len(matches) <= 400:
+            if len(matches) <= 500:
                 candidate_indices.update(matches)
+            else:
+                # 태그가 매우 흔하면 전수 대신 시총 상위 후보를 넣어 대형 peer 누락을 막습니다.
+                ranked = sorted(
+                    matches,
+                    key=lambda index: (
+                        -int(eligible[index].get("marketCap", 0)),
+                        eligible[index]["symbol"],
+                    ),
+                )
+                candidate_indices.update(ranked[:500])
         for term in tokens(stock.get("products", "")):
             matches = product_indices.get(term, set())
             if len(matches) <= 250:
                 candidate_indices.update(matches)
+            else:
+                ranked = sorted(
+                    matches,
+                    key=lambda index: (
+                        -int(eligible[index].get("marketCap", 0)),
+                        eligible[index]["symbol"],
+                    ),
+                )
+                candidate_indices.update(ranked[:250])
         candidate_indices.discard(row)
         ordered_indices = sorted(candidate_indices)
         missing_text_indices = [
@@ -321,7 +503,8 @@ def build_similarity(
                 "sharedExposures": shared_exposures,
                 "sharedTerms": terms,
             }
-            if low_confidence:
+            limited_comparison_evidence = not shared_exposures and score < 0.25
+            if low_confidence or limited_comparison_evidence:
                 result["confidence"] = "low"
             candidates.append(result)
         candidates.sort(
@@ -334,15 +517,17 @@ def build_similarity(
         results[stock["symbol"]] = candidates[:top_k]
 
     return {
-        "schemaVersion": 3,
+        "schemaVersion": 4,
         "asOf": date.today().isoformat(),
         "method": {
             "name": "annual-business-char-tfidf-plus-multi-exposure",
             "reportType": "annual",
             "standardWeights": {"text": 0.4, "businessExposures": 0.4, "products": 0.1, "scale": 0.1},
             "lowConfidenceWeights": {"text": 0.15, "businessExposures": 0.55, "products": 0.2, "scale": 0.1},
-            "exposureSimilarity": "70% weighted containment + 30% weighted Jaccard",
+            "exposureSimilarity": "40% left containment + 30% right containment + 30% weighted Jaccard",
             "industryExactMatchUsed": False,
+            "industrySoftPriorsUsed": True,
+            "industrySoftPriorCount": len(exposure_rules.get("industryPriors", {})),
             "textLimitChars": 8_000,
             "features": int(embeddings.shape[1]),
             "exposureRules": len(exposure_rules.get("rules", [])),
@@ -361,6 +546,11 @@ def build_similarity(
             "companiesWithExposures": sum(
                 bool(exposures_by_symbol[stock["symbol"]])
                 for stock in eligible
+            ),
+            "lowConfidenceRecommendations": sum(
+                item.get("confidence") == "low"
+                for items in results.values()
+                for item in items
             ),
         },
         "similar": results,

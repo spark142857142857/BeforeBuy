@@ -69,6 +69,9 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
                   <h3>{peer.stock.name}</h3>
                   <p className="peer-symbol">{peer.symbol} · {peer.stock.industry || "업종 정보 없음"}</p>
                   <p className="peer-reason">{peer.reason}</p>
+                  {peer.confidence === "low" && (
+                    <p className="peer-confidence-low">비교 근거 제한적 · 추가 확인 필요</p>
+                  )}
                   <div className="peer-score-row">
                     <span>본문 {score(peer.textSimilarity)}</span>
                     <span>사업 노출 {score(peer.exposureSimilarity)}</span>

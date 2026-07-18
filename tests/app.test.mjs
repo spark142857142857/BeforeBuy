@@ -67,6 +67,15 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   assert.match(html, /원화 수익률/);
 });
 
+test("low-evidence domestic comparisons are disclosed", async () => {
+  const response = await render("/stocks/kr-033780");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /KT&amp;G|KT&G/);
+  assert.match(html, /비교 근거 제한적 · 추가 확인 필요/);
+  assert.match(html, /정형 사업 노출 근거 부족/);
+});
+
 test("ETF detail shows representative holdings, coverage and official source", async () => {
   const response = await render("/stocks/xlf");
   assert.equal(response.status, 200);
