@@ -206,9 +206,6 @@ def extract_business_exposures(
     product_has_battery_context = bool(
         keyword_hits(products, battery_context_cues)
     )
-    business_has_battery_context = bool(
-        keyword_hits(business_text, battery_context_cues)
-    )
     exact_battery_industry = industry == "일차전지 및 이차전지 제조업"
     cell_product_evidence = keyword_hits(
         products,

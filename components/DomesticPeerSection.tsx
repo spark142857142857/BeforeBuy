@@ -2,9 +2,10 @@ import Link from "next/link";
 import { getDomesticStockInsight } from "@/lib/data/stock-insights";
 import { getKoreanStockBySymbol } from "@/lib/data/krx-master";
 
-function unavailableMessage(category: "spac" | "fund" | "limited") {
+function unavailableMessage(category: "spac" | "fund" | "limited" | "collection_error") {
   if (category === "spac") return "스팩은 영업 사업이 없어 일반 기업 유사도에서 제외했습니다.";
   if (category === "fund") return "인프라·부동산 펀드는 일반 기업과 분리해 ETF 비교 단계에서 다룹니다.";
+  if (category === "collection_error") return "최근 수집에서 연간 사업 내용을 확인하지 못했습니다. 다음 배치에서 다시 시도합니다.";
   return "아직 연간 사업보고서가 없어 KRX 업종과 주요 제품 정보만 제공합니다.";
 }
 
@@ -41,6 +42,11 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
               <span className={insight.profile.textConfidence === "low" ? "confidence-low" : ""}>
                 텍스트 신뢰도 {insight.profile.textConfidence === "low" ? "낮음" : "보통"}
               </span>
+              {insight.profile.refreshWarning && (
+                <span className="confidence-low">
+                  최근 갱신 실패 · {insight.profile.refreshWarning.attemptedAt} 정상본 유지
+                </span>
+              )}
               <a href={insight.profile.sourceUrl} target="_blank" rel="noreferrer">DART 원문 ↗</a>
             </div>
             <p className="business-excerpt">{insight.profile.excerpt}</p>

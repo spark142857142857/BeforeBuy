@@ -6,7 +6,7 @@ import json
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 CORP_OUTPUT = ROOT / "data" / "generated" / "dart_corp_codes.json"
 BUSINESS_OUTPUT = ROOT / "data" / "generated" / "dart_business.json.gz"
 LOW_CONFIDENCE_TEXT_CHARS = 3_000
+DEFAULT_MAX_CACHE_AGE_DAYS = 120
 
 
 def read_json(path: Path, default: Any) -> Any:
@@ -47,6 +48,39 @@ def write_json(path: Path, payload: Any) -> None:
 
 def text_confidence(text: str) -> str:
     return "low" if len(text) < LOW_CONFIDENCE_TEXT_CHARS else "standard"
+
+
+def cache_is_fresh(
+    company: dict[str, Any],
+    *,
+    today: date | None = None,
+    max_age_days: int = DEFAULT_MAX_CACHE_AGE_DAYS,
+) -> bool:
+    if company.get("status") != "ok" or max_age_days <= 0:
+        return False
+    try:
+        updated_at = datetime.strptime(company["updatedAt"], "%Y-%m-%d").date()
+    except (KeyError, TypeError, ValueError):
+        return False
+    return ((today or date.today()) - updated_at).days <= max_age_days
+
+
+def merge_company_result(
+    previous: dict[str, Any] | None,
+    incoming: dict[str, Any],
+) -> dict[str, Any]:
+    if previous and previous.get("status") == "ok" and incoming.get("status") != "ok":
+        preserved = dict(previous)
+        preserved["lastAttempt"] = {
+            "status": incoming.get("status", "unknown"),
+            "attemptedAt": incoming.get("updatedAt", date.today().isoformat()),
+            **({"error": incoming["error"]} if incoming.get("error") else {}),
+        }
+        return preserved
+    if incoming.get("status") == "ok":
+        incoming = dict(incoming)
+        incoming.pop("lastAttempt", None)
+    return incoming
 
 
 def build_corp_map(client: DartClient) -> dict[str, Any]:
@@ -85,6 +119,7 @@ def collect_business(
     output: Path,
     *,
     refresh: bool = False,
+    max_cache_age_days: int = DEFAULT_MAX_CACHE_AGE_DAYS,
     checkpoint_every: int = 100,
     workers: int = 3,
 ) -> dict[str, Any]:
@@ -96,6 +131,9 @@ def collect_business(
         for company in companies.values():
             status = company.get("status", "unknown")
             statuses[status] = statuses.get(status, 0) + 1
+        refresh_warnings = sum(
+            bool(company.get("lastAttempt")) for company in companies.values()
+        )
         return {
             "schemaVersion": 2,
             "asOf": date.today().isoformat(),
@@ -105,7 +143,11 @@ def collect_business(
                 "prefer": "content-corrected then original",
                 "exclude": ["quarterly", "half-year", "attachment-corrected", "attachment-added"],
             },
-            "counts": {"total": len(companies), **statuses},
+            "counts": {
+                "total": len(companies),
+                **statuses,
+                "refreshWarnings": refresh_warnings,
+            },
             "companies": companies,
         }
 
@@ -182,7 +224,11 @@ def collect_business(
     pending = [
         symbol
         for symbol in symbols
-        if refresh or companies.get(symbol, {}).get("status") != "ok"
+        if refresh
+        or not cache_is_fresh(
+            companies.get(symbol, {}),
+            max_age_days=max_cache_age_days,
+        )
     ]
     cached = len(symbols) - len(pending)
     if cached:
@@ -198,9 +244,13 @@ def collect_business(
     with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
         futures = [executor.submit(collect_with_thread_client, symbol) for symbol in pending]
         for index, future in enumerate(as_completed(futures), start=1):
-            symbol, company = future.result()
+            symbol, incoming = future.result()
+            previous_company = companies.get(symbol)
+            company = merge_company_result(previous_company, incoming)
             companies[symbol] = company
-            print(f"[{index}/{len(pending)}] {symbol}: {company['status']}")
+            preserved = previous_company and company.get("status") == "ok" and incoming.get("status") != "ok"
+            suffix = " (preserved last good snapshot)" if preserved else ""
+            print(f"[{index}/{len(pending)}] {symbol}: {incoming['status']}{suffix}")
             if index % checkpoint_every == 0:
                 write_json(output, payload())
 
@@ -216,6 +266,12 @@ def main() -> None:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--output", type=Path, default=BUSINESS_OUTPUT)
     parser.add_argument("--refresh", action="store_true", help="Re-download successful records")
+    parser.add_argument(
+        "--max-cache-age-days",
+        type=int,
+        default=DEFAULT_MAX_CACHE_AGE_DAYS,
+        help="Re-check successful records older than this many days (0 always refreshes)",
+    )
     parser.add_argument("--checkpoint-every", type=int, default=100)
     parser.add_argument("--workers", type=int, default=3)
     args = parser.parse_args()
@@ -242,6 +298,7 @@ def main() -> None:
         symbols,
         args.output,
         refresh=args.refresh,
+        max_cache_age_days=max(0, args.max_cache_age_days),
         checkpoint_every=max(1, args.checkpoint_every),
         workers=max(1, args.workers),
     )

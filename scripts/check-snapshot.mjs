@@ -16,6 +16,7 @@ const similarity = JSON.parse(similarityRaw);
 const globalLinks = JSON.parse(globalLinksRaw);
 const holdings = JSON.parse(holdingsRaw);
 const assetCount = (catalog.match(/asset\(\{/g) ?? []).length;
+const assetSlugs = new Set([...catalog.matchAll(/asset\(\{ slug: "([^"]+)"/g)].map((match) => match[1]));
 const relationBlocks = (catalog.match(/^  "[a-z0-9-]+": \[$/gm) ?? []).length;
 if (assetCount < 45) throw new Error(`Expected at least 45 curated assets, found ${assetCount}`);
 if (relationBlocks < 15) throw new Error(`Expected at least 15 Korean relation sets, found ${relationBlocks}`);
@@ -28,8 +29,19 @@ if (!krx.stocks.some((stock) => stock.symbol === "005930" && stock.name === "삼
 if (new Set(krx.stocks.map((stock) => stock.symbol)).size !== krx.stocks.length) {
   throw new Error("KRX master contains duplicate symbols");
 }
+const stockSymbols = new Set(krx.stocks.map((stock) => stock.symbol));
 if (krx.stocks.filter((stock) => stock.industry).length < 2500) {
   throw new Error("KRX master industry coverage is unexpectedly low");
+}
+for (const symbol of ["138040", "369370"]) {
+  if (krx.stocks.find((stock) => stock.symbol === symbol)?.securityType !== "common") {
+    throw new Error(`A common stock is misclassified as a REIT: ${symbol}`);
+  }
+}
+for (const symbol of ["00104K", "37550L"]) {
+  if (krx.stocks.find((stock) => stock.symbol === symbol)?.securityType !== "preferred") {
+    throw new Error(`A conversion preferred share is misclassified: ${symbol}`);
+  }
 }
 if (dartCorp.counts.listedStocks !== krx.counts.total) {
   throw new Error("DART corporation mapping does not match the KRX master size");
@@ -42,6 +54,12 @@ if (dartCorp.companies["005930"]?.corpCode !== "00126380") {
 }
 if (profiles.counts.profiles < 2600 || profiles.counts.preferredAliases < 100) {
   throw new Error(`Business profile coverage is unexpectedly low: ${JSON.stringify(profiles.counts)}`);
+}
+if (profiles.counts.profiles + profiles.counts.preferredAliases + profiles.counts.unavailable !== krx.counts.total) {
+  throw new Error("Business profile, alias and unavailable counts do not cover the KRX master exactly");
+}
+if (profiles.excerptChars > 600 || typeof profiles.counts.refreshWarnings !== "number") {
+  throw new Error("Business profile size or refresh warning metadata is invalid");
 }
 if (profiles.aliases["005935"] !== "005930") {
   throw new Error("Samsung Electronics preferred stock does not share the common stock profile");
@@ -63,6 +81,27 @@ if (similarity.counts.companiesWithExposures < 2200) {
 }
 if (similarity.counts.companies < 2500 || similarity.counts.recommendations < 25000) {
   throw new Error(`Similarity coverage is unexpectedly low: ${JSON.stringify(similarity.counts)}`);
+}
+for (const [symbol, candidates] of Object.entries(similarity.similar)) {
+  if (!stockSymbols.has(symbol) || candidates.length !== 10) {
+    throw new Error(`Similarity source or candidate count is invalid: ${symbol}`);
+  }
+  const candidateSymbols = new Set();
+  for (const candidate of candidates) {
+    if (
+      candidate.symbol === symbol ||
+      candidateSymbols.has(candidate.symbol) ||
+      !stockSymbols.has(candidate.symbol)
+    ) {
+      throw new Error(`Similarity candidate identity is invalid: ${symbol} -> ${candidate.symbol}`);
+    }
+    candidateSymbols.add(candidate.symbol);
+    for (const key of ["score", "textSimilarity", "exposureSimilarity", "productSimilarity"]) {
+      if (!Number.isFinite(candidate[key]) || candidate[key] < 0 || candidate[key] > 1) {
+        throw new Error(`Similarity score is outside 0..1: ${symbol} -> ${candidate.symbol} ${key}`);
+      }
+    }
+  }
 }
 if (!similarity.counts.lowConfidenceRecommendations) {
   throw new Error("Similarity snapshot must disclose recommendations with limited comparison evidence");
@@ -124,6 +163,17 @@ if (!similarity.similar["090430"]?.slice(0, 3).some((candidate) => candidate.sym
 if (globalLinks.method.llmUsed !== false || globalLinks.counts.mappedStocks < 400) {
   throw new Error(`Global link coverage or method is invalid: ${JSON.stringify(globalLinks.counts)}`);
 }
+for (const [symbol, matches] of Object.entries(globalLinks.links)) {
+  if (!stockSymbols.has(symbol)) throw new Error(`Global link source is unknown: ${symbol}`);
+  for (const match of matches) {
+    if (!match.reason || !match.matchedTerms.length) {
+      throw new Error(`Global link evidence is missing: ${symbol} ${match.id}`);
+    }
+    for (const slug of [...match.peerSlugs, ...match.etfSlugs]) {
+      if (!assetSlugs.has(slug)) throw new Error(`Global link asset is unknown: ${slug}`);
+    }
+  }
+}
 if (!globalLinks.links["005930"]?.some((match) => match.peerSlugs.includes("micron") && match.etfSlugs.includes("soxx"))) {
   throw new Error("Samsung Electronics does not include the expected global semiconductor links");
 }
@@ -139,6 +189,9 @@ for (const slug of requiredEtfs) {
   if (!fund || fund.holdings.length < 5 || !fund.sourceUrl || !fund.asOf) {
     throw new Error(`ETF holdings snapshot is incomplete for ${slug}`);
   }
+}
+for (const slug of Object.keys(holdings.funds)) {
+  if (!assetSlugs.has(slug)) throw new Error(`ETF holdings reference an unknown asset: ${slug}`);
 }
 if (!catalog.includes('ticker: "449450", name: "PLUS K방산"')) {
   throw new Error("449450 product identity is incorrect");

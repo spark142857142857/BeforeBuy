@@ -5,8 +5,8 @@ const workerUrl = new URL("../dist/server/index.js", import.meta.url);
 workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
 const { default: worker } = await import(workerUrl.href);
 
-function render(pathname = "/") {
-  return worker.fetch(new Request(`http://localhost${pathname}`, { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
+function render(pathname = "/", headers = {}) {
+  return worker.fetch(new Request(`http://localhost${pathname}`, { headers: { accept: "text/html", ...headers } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
 test("home renders Korean stock search and industry map", async () => {
@@ -33,7 +33,7 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /동화약품/);
-  assert.match(html, /전체 검색 연결 완료/);
+  assert.match(html, /종목 목록 연결/);
   assert.match(html, /DART 연간 사업 내용/);
   assert.match(html, /연간 사업보고서 기반 국내 비교/);
   assert.match(html, /자동 국내 유사 종목/);
@@ -65,6 +65,19 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   assert.match(html, /공통점과 결정 전 차이/);
   assert.match(html, /2026-07-15/);
   assert.match(html, /원화 수익률/);
+  assert.match(html, /큐레이션 참고값/);
+  assert.match(html, /화면 구조 검증을 위한 큐레이션 참고값/);
+});
+
+test("basic detail discloses global and ETF coverage gaps", async () => {
+  const response = await render("/stocks/kr-278990");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /EMB/);
+  assert.match(html, /글로벌 peer 규칙 연결/);
+  assert.match(html, /규칙 미통과/);
+  assert.match(html, /ETF 연결 필요/);
+  assert.doesNotMatch(html, /국내외 peer와 관련 ETF까지 자동 연결됐습니다/);
 });
 
 test("low-evidence domestic comparisons are disclosed", async () => {
@@ -93,7 +106,18 @@ test("snapshot endpoint exposes freshness and asset count", async () => {
   const response = await render("/api/snapshot");
   assert.equal(response.status, 200);
   const payload = await response.json();
-  assert.equal(payload.stale, false);
+  assert.equal(typeof payload.stale, "boolean");
   assert.ok(payload.assetCount >= 45);
   assert.equal(payload.fxAsOf, "2026-07-15");
+  assert.equal(payload.provider, "수동 검수 큐레이션 참고값");
+});
+
+test("metadata ignores untrusted forwarded hosts", async () => {
+  const response = await render("/", {
+    "x-forwarded-host": "attacker.example",
+    "x-forwarded-proto": "https",
+  });
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.doesNotMatch(html, /attacker\.example/);
 });

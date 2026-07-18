@@ -18,17 +18,17 @@
     "data:profiles": "uv run python pipeline/prepare_web_profiles.py",
     "data:similarity": "uv run python pipeline/build_similarity.py",
     "data:global": "uv run python pipeline/build_global_links.py",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern outputs --ignore-pattern work --ignore-pattern .venv --ignore-pattern data",
-    "db:generate": "drizzle-kit generate"
+    "data:derive": "npm run data:profiles && npm run data:similarity && npm run data:global && npm run data:check",
+    "data:refresh": "npm run data:krx && npm run data:dart && npm run data:derive",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern outputs --ignore-pattern work --ignore-pattern .venv --ignore-pattern data"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/vite-plugin": "1.45.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -36,15 +36,17 @@
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
     "cross-env": "^10.1.0",
-    "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vinext": "0.0.50",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vite": "8.1.5",
+    "wrangler": "4.112.0"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   },
   "type": "module"
 }

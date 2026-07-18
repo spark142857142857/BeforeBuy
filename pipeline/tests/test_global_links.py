@@ -4,6 +4,47 @@ from build_global_links import build_links
 
 
 class GlobalLinksTest(unittest.TestCase):
+    def test_uses_raw_business_text_when_web_excerpt_is_compact(self):
+        master = {
+            "stocks": [
+                {
+                    "symbol": "000001",
+                    "name": "테스트",
+                    "sector": "",
+                    "industry": "",
+                    "products": "",
+                    "securityType": "common",
+                }
+            ]
+        }
+        profiles = {"profiles": {"000001": {"excerpt": "짧은 미리보기"}}, "aliases": {}}
+        rules = {
+            "rules": [
+                {
+                    "id": "platform",
+                    "theme": "platform",
+                    "label": "플랫폼",
+                    "businessKeywords": ["검색 포털", "커머스"],
+                    "minimumScore": 2,
+                    "peerSlugs": ["alphabet"],
+                    "etfSlugs": ["qqq"],
+                    "reason": "플랫폼 비교",
+                }
+            ]
+        }
+        business = {
+            "companies": {
+                "000001": {
+                    "status": "ok",
+                    "text": "검색 포털과 커머스 서비스를 운영합니다.",
+                }
+            }
+        }
+
+        result = build_links(master, profiles, rules, business)
+
+        self.assertIn("000001", result["links"])
+
     def test_maps_platform_and_automotive_rules_without_llm(self):
         master = {
             "stocks": [

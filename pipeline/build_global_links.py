@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 from collections import Counter
 from datetime import date
@@ -11,11 +12,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 PROFILES_PATH = ROOT / "data" / "generated" / "business_profiles.json"
+BUSINESS_PATH = ROOT / "data" / "generated" / "dart_business.json.gz"
 RULES_PATH = ROOT / "data" / "curated" / "global_rules.json"
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "global_links.json"
 
 
 def read_json(path: Path) -> dict[str, Any]:
+    if path.suffix == ".gz":
+        with gzip.open(path, "rt", encoding="utf-8") as file:
+            return json.load(file)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -62,6 +67,7 @@ def build_links(
     master: dict[str, Any],
     profiles: dict[str, Any],
     rules: dict[str, Any],
+    business: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stocks = {stock["symbol"]: stock for stock in master.get("stocks", [])}
     aliases = profiles.get("aliases", {})
@@ -75,6 +81,9 @@ def build_links(
         profile = profiles.get("profiles", {}).get(business_symbol)
         if not profile:
             continue
+        raw_company = (business or {}).get("companies", {}).get(business_symbol, {})
+        if raw_company.get("status") == "ok" and raw_company.get("text"):
+            profile = {**profile, "excerpt": raw_company["text"][:1_200]}
         matches = []
         for rule in rules.get("rules", []):
             score, terms = score_rule(stock, profile, rule)
@@ -133,6 +142,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build deterministic global peer and ETF links")
     parser.add_argument("--master", type=Path, default=MASTER_PATH)
     parser.add_argument("--profiles", type=Path, default=PROFILES_PATH)
+    parser.add_argument("--business", type=Path, default=BUSINESS_PATH)
     parser.add_argument("--rules", type=Path, default=RULES_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
@@ -141,6 +151,7 @@ def main() -> None:
         read_json(args.master),
         read_json(args.profiles),
         read_json(args.rules),
+        read_json(args.business),
     )
     write_json(args.output, payload)
     print(

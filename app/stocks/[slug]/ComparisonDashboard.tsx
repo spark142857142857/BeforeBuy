@@ -79,6 +79,9 @@ export function ComparisonDashboard({ selected, alternatives, fxAsOf }: { select
             </tbody>
           </table>
         </div>
+        <p className="data-provenance-note">
+          밸류에이션·성과·위험 지표는 화면 구조 검증을 위한 큐레이션 참고값입니다. 실제 투자 판단 전 거래소·운용사·기업 공시의 최신 값을 확인하세요.
+        </p>
       </section>
 
       <section className="difference-section">

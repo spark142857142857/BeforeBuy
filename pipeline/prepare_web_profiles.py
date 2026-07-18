@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 BUSINESS_PATH = ROOT / "data" / "generated" / "dart_business.json.gz"
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "business_profiles.json"
-EXCERPT_CHARS = 1_200
+EXCERPT_CHARS = 600
 PREFERRED_MANUAL_ALIASES = {
     "008355": "008350",  # 남선알미우 → 남선알미늄
     "007815": "007810",  # 코리아써우 → 코리아써키트
@@ -109,11 +109,21 @@ def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str
                 "fallbackCount": company.get("fallbackCount", 0),
                 "excerpt": company["text"][:EXCERPT_CHARS],
             }
+            if company.get("lastAttempt"):
+                profiles[symbol]["refreshWarning"] = {
+                    "status": company["lastAttempt"].get("status", "unknown"),
+                    "attemptedAt": company["lastAttempt"].get("attemptedAt", ""),
+                }
         elif company.get("status") == "no_annual_report":
             stock = stocks_by_symbol[symbol]
             unavailable[symbol] = {
                 "category": no_annual_category(stock),
                 "reason": "annual_report_not_available",
+            }
+        elif company.get("status") in {"error", "annual_report_unusable"}:
+            unavailable[symbol] = {
+                "category": "collection_error",
+                "reason": company.get("status", "collection_error"),
             }
 
     categories: dict[str, int] = {}
@@ -129,6 +139,9 @@ def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str
             "profiles": len(profiles),
             "preferredAliases": len(aliases),
             "unavailable": len(unavailable),
+            "refreshWarnings": sum(
+                bool(profile.get("refreshWarning")) for profile in profiles.values()
+            ),
             **categories,
         },
         "profiles": profiles,

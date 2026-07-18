@@ -7,7 +7,9 @@ import { EtfHoldingsSection } from "@/components/EtfHoldingsSection";
 import { GlobalPeerEtfSection } from "@/components/GlobalPeerEtfSection";
 import { StockEtfComparisonSection } from "@/components/StockEtfComparisonSection";
 import { assets, getAlternatives, getAsset, snapshotMeta } from "@/lib/data/catalog";
+import { getGlobalStockInsight } from "@/lib/data/global-insights";
 import { getKoreanStockMaster, krxSnapshotMeta, type KoreanStockMasterRecord } from "@/lib/data/krx-master";
+import { getDomesticStockInsight } from "@/lib/data/stock-insights";
 
 export function generateStaticParams() {
   return assets.map((item) => ({ slug: item.slug }));
@@ -60,8 +62,8 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
             <p className="asset-name-en">{selected.nameEn}</p>
           </div>
           <div className="snapshot-card">
-            <span className="live-dot" />
-            <div><strong>데이터 정상</strong><small>{snapshotMeta.asOf} 종가 기준</small></div>
+            <span className="reference-dot" />
+            <div><strong>큐레이션 참고값</strong><small>{snapshotMeta.asOf} 검수 기준</small></div>
           </div>
         </div>
         <p className="asset-summary">{selected.summary}</p>
@@ -93,7 +95,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
 
       <footer className="site-footer shell">
         <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>
-        <p>투자 권유가 아닌 정보 비교 서비스입니다. 지표는 최근 저장된 일별 스냅샷입니다.</p>
+        <p>투자 권유가 아닌 정보 비교 서비스입니다. 비교 지표는 출처 연결 전 큐레이션 참고값입니다.</p>
       </footer>
     </main>
   );
@@ -110,6 +112,47 @@ function securityTypeLabel(type: KoreanStockMasterRecord["securityType"]) {
 }
 
 function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
+  const domesticInsight = getDomesticStockInsight(stock.symbol);
+  const globalInsight = getGlobalStockInsight(stock.symbol);
+  const hasBusinessProfile = Boolean(domesticInsight.profile);
+  const hasDomesticPeers = domesticInsight.peers.length > 0;
+  const hasGlobalPeers = globalInsight.peers.length > 0;
+  const hasEtfs = globalInsight.etfs.length > 0;
+  const hasExpandedAlternatives = hasGlobalPeers || hasEtfs;
+  const steps = [
+    { number: "01", label: "한국 상장 종목 검색", state: "done", note: "완료" },
+    {
+      number: "02",
+      label: "DART 연간 사업 내용",
+      state: hasBusinessProfile ? "done" : "limited",
+      note: hasBusinessProfile ? "완료" : domesticInsight.unavailable ? "대상 제외·자료 없음" : "연결 없음",
+    },
+    {
+      number: "03",
+      label: "자동 국내 유사 종목",
+      state: hasDomesticPeers ? "done" : "limited",
+      note: hasDomesticPeers ? `${domesticInsight.peers.length}개 연결` : "후보 없음",
+    },
+    {
+      number: "04",
+      label: "글로벌 peer 규칙 연결",
+      state: hasGlobalPeers ? "done" : "limited",
+      note: hasGlobalPeers ? `${globalInsight.peers.length}개 연결` : "규칙 미통과",
+    },
+    {
+      number: "05",
+      label: "관련 ETF·구성 종목",
+      state: hasEtfs ? "done" : "limited",
+      note: hasEtfs ? `${globalInsight.etfs.length}개 연결` : "연결 없음",
+    },
+    {
+      number: "06",
+      label: "개별 종목 vs ETF",
+      state: hasEtfs ? "done" : "limited",
+      note: hasEtfs ? "비교 가능" : "ETF 연결 필요",
+    },
+  ];
+
   return (
     <main className="detail-page">
       <header className="site-header detail-header">
@@ -131,7 +174,7 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
           </div>
           <div className="snapshot-card">
             <span className="live-dot" />
-            <div><strong>전체 검색 연결 완료</strong><small>{krxSnapshotMeta.asOf} 목록 기준</small></div>
+            <div><strong>종목 목록 연결</strong><small>{krxSnapshotMeta.asOf} 목록 기준</small></div>
           </div>
         </div>
 
@@ -144,18 +187,19 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
 
         <div className="pipeline-status">
           <p className="eyebrow">DATA PIPELINE STATUS</p>
-          <h2>국내외 peer와 관련 ETF까지 자동 연결됐습니다</h2>
+          <h2>{hasDomesticPeers && hasExpandedAlternatives
+            ? "국내외 비교 후보가 연결됐습니다"
+            : "연결된 데이터 범위를 구분해 표시합니다"}</h2>
           <p>
             최신 연간 사업보고서와 KRX 업종·주요 제품으로 국내 유사 종목을 계산하고,
             설명 가능한 테마 규칙으로 글로벌 peer와 ETF 후보를 연결합니다.
           </p>
           <ol>
-            <li className="done"><span>01</span><strong>한국 상장 종목 검색</strong><small>완료</small></li>
-            <li className="done"><span>02</span><strong>DART 연간 사업 내용</strong><small>완료</small></li>
-            <li className="done"><span>03</span><strong>자동 국내 유사 종목</strong><small>완료</small></li>
-            <li className="done"><span>04</span><strong>글로벌 peer 규칙 연결</strong><small>완료</small></li>
-            <li className="done"><span>05</span><strong>관련 ETF·구성 종목</strong><small>완료</small></li>
-            <li className="done"><span>06</span><strong>개별 종목 vs ETF</strong><small>완료</small></li>
+            {steps.map((step) => (
+              <li className={step.state} key={step.number}>
+                <span>{step.number}</span><strong>{step.label}</strong><small>{step.note}</small>
+              </li>
+            ))}
           </ol>
         </div>
       </section>

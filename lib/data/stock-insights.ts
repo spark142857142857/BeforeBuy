@@ -14,10 +14,14 @@ type BusinessProfile = {
   textLength: number;
   fallbackCount: number;
   excerpt: string;
+  refreshWarning?: {
+    status: string;
+    attemptedAt: string;
+  };
 };
 
 type UnavailableProfile = {
-  category: "spac" | "fund" | "limited";
+  category: "spac" | "fund" | "limited" | "collection_error";
   reason: string;
 };
 

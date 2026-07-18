@@ -8,9 +8,9 @@ export type Metrics = {
   shareholderReturn: number;
   volatility: number;
   maxDrawdown: number;
-  return3m: number;
+  return3m?: number;
   return1y: number;
-  return3y: number;
+  return3y?: number;
   return1yKrw?: number;
 };
 
@@ -44,9 +44,7 @@ const baseMetrics: Metrics = {
   shareholderReturn: 1.8,
   volatility: 27,
   maxDrawdown: -24,
-  return3m: 5,
   return1y: 14,
-  return3y: 31,
 };
 
 function asset(
@@ -219,8 +217,8 @@ export const sectors = ["반도체", "모빌리티", "2차전지", "플랫폼", 
 export const snapshotMeta = {
   asOf: "2026-07-15",
   fxAsOf: "2026-07-15",
-  status: "healthy" as const,
-  source: "DART · 일별 시장 스냅샷",
+  status: "reference" as const,
+  source: "수동 검수 큐레이션 참고값",
 };
 
 export function getAsset(slug: string) {

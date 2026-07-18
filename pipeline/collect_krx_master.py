@@ -32,15 +32,21 @@ def iso_date(value: Any) -> str | None:
     return None if pd.isna(parsed) else parsed.strftime("%Y-%m-%d")
 
 
-def security_type(name: str) -> str:
+REIT_INDUSTRIES = {"부동산 임대 및 공급업", "신탁업 및 집합투자업"}
+
+
+def security_type(name: str, industry: str = "") -> str:
     compact = re.sub(r"\s+", "", name)
     if compact in COMMON_NAMES_ENDING_WITH_U:
         return "common"
     if "스팩" in compact or compact.endswith("SPAC"):
         return "spac"
-    if "리츠" in compact or compact.endswith("REIT"):
+    if (
+        ("리츠" in compact and industry in REIT_INDUSTRIES)
+        or compact.endswith("REIT")
+    ):
         return "reit"
-    if re.search(r"(우|우B|우C|우선주)$", compact):
+    if re.search(r"(우(?:B|C)?(?:\(전환\))?|우선주)$", compact):
         return "preferred"
     return "common"
 
@@ -57,25 +63,27 @@ def first_existing(row: pd.Series, *columns: str) -> Any:
 def normalize(frame: pd.DataFrame) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for _, row in frame.iterrows():
-        symbol = text(first_existing(row, "Code", "Symbol", "Ticker")).zfill(6)
+        raw_symbol = text(first_existing(row, "Code", "Symbol", "Ticker"))
         name = text(first_existing(row, "Name", "CodeName"))
         market = text(first_existing(row, "Market", "MarketName")).upper()
+        industry = text(first_existing(row, "Industry"))
 
-        if not symbol or not name or market not in SUPPORTED_MARKETS:
+        if not raw_symbol or not name or market not in SUPPORTED_MARKETS:
             continue
+        symbol = raw_symbol.zfill(6)
 
         records.append(
             {
                 "symbol": symbol,
                 "name": name,
                 "market": market,
-                "sector": text(first_existing(row, "Industry")),
-                "industry": text(first_existing(row, "Industry")),
+                "sector": industry,
+                "industry": industry,
                 "products": text(first_existing(row, "Products")),
                 "marketSegment": text(first_existing(row, "MarketSegment")),
                 "isin": text(first_existing(row, "ISU_CD", "ISIN")),
                 "listingDate": iso_date(first_existing(row, "ListingDate")),
-                "securityType": security_type(name),
+                "securityType": security_type(name, industry),
                 "marketCap": int(first_existing(row, "Marcap") or 0),
                 "sharesOutstanding": int(first_existing(row, "Stocks") or 0),
                 "homepage": text(first_existing(row, "HomePage")),
