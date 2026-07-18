@@ -344,8 +344,13 @@ DART_API_KEY=your_open_dart_api_key
 
 ```bash
 npm run lint
+npm run test:use-cases
 npm test
 ```
+
+`test:use-cases`는 빌드된 앱을 대상으로 매수 전 대안 탐색의 대표 사용자 흐름만
+빠르게 회귀 검증합니다. `npm test`는 이 사용 사례와 웹 경로, Python 데이터
+파이프라인 테스트를 모두 실행합니다.
 
 현재 테스트는 다음을 검증합니다.
 
@@ -358,6 +363,10 @@ npm test
 - 대표 종목의 글로벌 peer·ETF 규칙 연결
 - ETF 주요 구성 종목, 기준일, 공식 출처
 - KRX 종목 수, 중복 코드, DART 매핑 무결성
+- 삼성전자·LG에너지솔루션·NAVER 대표 사용 사례
+- 우선주의 보통주 사업 프로필 연결과 스팩 제외 사유
+- 글로벌·ETF 규칙 미통과 종목의 데이터 공백 표시
+- 종목명·종목코드 검색 결과의 상세 URL 일치
 
 ## 로드맵
 
