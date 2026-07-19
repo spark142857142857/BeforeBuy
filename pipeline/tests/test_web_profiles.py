@@ -54,10 +54,64 @@ class WebProfileTest(unittest.TestCase):
         result = build_profiles(master, business)
 
         self.assertEqual(result["counts"]["refreshWarnings"], 1)
+        self.assertEqual(result["schemaVersion"], 2)
+        self.assertNotIn("excerpt", result["profiles"]["000001"])
         self.assertEqual(
             result["profiles"]["000001"]["refreshWarning"]["attemptedAt"],
             "2026-07-18",
         )
         self.assertEqual(
             result["unavailable"]["000002"]["category"], "collection_error"
+        )
+
+    def test_ignores_companies_that_are_no_longer_in_the_krx_master(self) -> None:
+        master = {
+            "stocks": [
+                {
+                    "symbol": "000001",
+                    "name": "현재기업",
+                    "securityType": "common",
+                    "industry": "제조업",
+                }
+            ]
+        }
+        company = {
+            "status": "ok",
+            "reportPeriod": "2025.12",
+            "receiptDate": "2026-03-18",
+            "sourceUrl": "https://dart.example/1",
+            "textConfidence": "standard",
+            "textLength": 5_000,
+            "text": "사업 내용" * 1_000,
+        }
+        business = {
+            "companies": {
+                "000001": company,
+                "999999": {**company, "status": "unmapped"},
+            }
+        }
+
+        result = build_profiles(master, business)
+
+        self.assertEqual(set(result["profiles"]), {"000001"})
+        self.assertNotIn("999999", result["aliases"])
+        self.assertNotIn("999999", result["unavailable"])
+
+    def test_marks_current_stock_without_collection_result_as_unavailable(self) -> None:
+        master = {
+            "stocks": [
+                {
+                    "symbol": "000001",
+                    "name": "신규상장기업",
+                    "securityType": "common",
+                    "industry": "제조업",
+                }
+            ]
+        }
+
+        result = build_profiles(master, {"companies": {}})
+
+        self.assertEqual(
+            result["unavailable"]["000001"],
+            {"category": "collection_error", "reason": "not_collected"},
         )

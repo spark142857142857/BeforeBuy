@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAssetByTicker, type Asset } from "@/lib/data/catalog";
-import { getEtfHoldings, getGlobalStockInsight } from "@/lib/data/global-insights";
+import { getEtfHoldings, getRelatedEtfs, type EtfHoldings } from "@/lib/data/global-insights";
 import { getKoreanStockBySymbol } from "@/lib/data/krx-master";
 import { pct } from "@/lib/format";
 
@@ -9,9 +9,8 @@ function productExposures(products: string, industry: string) {
     .split(/[,/]/)
     .map((item) => item.replace(/\([^)]*\)/g, "").trim())
     .filter((item) => item && item !== "-");
-  return Array.from(new Set(items)).slice(0, 3).length
-    ? Array.from(new Set(items)).slice(0, 3)
-    : [industry || "사업 정보 확인 필요"];
+  const unique = Array.from(new Set(items)).slice(0, 3);
+  return unique.length ? unique : [industry || "사업 정보 확인 필요"];
 }
 
 function companyRisks(asset: Asset | undefined, industry: string) {
@@ -22,8 +21,7 @@ function companyRisks(asset: Asset | undefined, industry: string) {
   ];
 }
 
-function inclusionText(symbol: string, slug: string) {
-  const snapshot = getEtfHoldings(slug);
+function inclusionText(symbol: string, snapshot: EtfHoldings | undefined) {
   if (!snapshot) return "구성 자료 확인 필요";
   const holding = snapshot.holdings.find((item) => item.ticker === symbol);
   if (!holding) return `표시된 주요 ${snapshot.holdings.length}개에는 없음`;
@@ -32,8 +30,7 @@ function inclusionText(symbol: string, slug: string) {
     : "대표 구성 종목에 포함";
 }
 
-function concentrationText(slug: string) {
-  const snapshot = getEtfHoldings(slug);
+function concentrationText(snapshot: EtfHoldings | undefined) {
   if (!snapshot) return "구성 자료 확인 필요";
   const weights = snapshot.holdings.map((item) => item.weight);
   if (weights.every((weight) => weight !== undefined)) {
@@ -44,9 +41,14 @@ function concentrationText(slug: string) {
 }
 
 function MetricComparison({ stock, etf }: { stock: Asset; etf: Asset }) {
+  const etfReturn = etf.market === "US" ? etf.metrics.return1yKrw : etf.metrics.return1y;
+  const returnLabel = etf.market === "US" ? "1년 수익률(원화 환산)" : "1년 수익률";
   return (
     <div className="stock-etf-metrics">
-      <span><small>1년 수익률</small><strong>{pct(stock.metrics.return1y)} vs {pct(etf.metrics.return1y)}</strong></span>
+      <span>
+        <small>{returnLabel}</small>
+        <strong>{pct(stock.metrics.return1y)} vs {etfReturn === undefined ? "자료 없음" : pct(etfReturn)}</strong>
+      </span>
       <span><small>연환산 변동성</small><strong>{stock.metrics.volatility.toFixed(1)}% vs {etf.metrics.volatility.toFixed(1)}%</strong></span>
       <span><small>최대 낙폭</small><strong>{pct(stock.metrics.maxDrawdown)} vs {pct(etf.metrics.maxDrawdown)}</strong></span>
     </div>
@@ -55,12 +57,14 @@ function MetricComparison({ stock, etf }: { stock: Asset; etf: Asset }) {
 
 export function StockEtfComparisonSection({ symbol, compact = false }: { symbol: string; compact?: boolean }) {
   const stock = getKoreanStockBySymbol(symbol);
-  const insight = getGlobalStockInsight(symbol);
-  if (!stock || !insight.etfs.length) return null;
-
   const selectedAsset = getAssetByTicker(symbol, "KR");
-  const exposures = selectedAsset?.exposures ?? productExposures(stock.products, stock.industry);
-  const risks = companyRisks(selectedAsset, stock.industry);
+  const relatedEtfs = getRelatedEtfs(symbol);
+  if ((!stock && !selectedAsset) || !relatedEtfs.length) return null;
+
+  const stockName = stock?.name ?? selectedAsset?.name ?? symbol;
+  const industry = stock?.industry ?? selectedAsset?.industry ?? "";
+  const exposures = selectedAsset?.exposures ?? productExposures(stock?.products ?? "", industry);
+  const risks = companyRisks(selectedAsset, industry);
 
   return (
     <section className={`stock-etf-comparison-section ${compact ? "compact" : ""}`}>
@@ -76,8 +80,8 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
         {compact ? (
           <details className="stock-etf-disclosure">
             <summary>
-              <span>관련 ETF {insight.etfs.length}개</span>
-              <strong>{insight.etfs.map(({ asset }) => asset.name).join(" · ")}</strong>
+              <span>관련 ETF {relatedEtfs.length}개</span>
+              <strong>{relatedEtfs.map(({ asset }) => asset.name).join(" · ")}</strong>
               <small>구성·집중도·편입 비중 비교 펼치기</small>
             </summary>
             <div className="stock-etf-compare-stack">
@@ -94,21 +98,21 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
   );
 
   function renderEtfCards() {
-    return insight.etfs.map(({ asset: etf, themeLabel }) => {
+    return relatedEtfs.map(({ asset: etf, themeLabel }) => {
       const holdings = getEtfHoldings(etf.slug);
       return (
         <article className="stock-etf-card" key={etf.slug}>
           <div className="stock-etf-card-heading">
             <div>
               <span>{themeLabel}</span>
-              <h3>{stock.name} <i>vs</i> {etf.name}</h3>
+              <h3>{stockName} <i>vs</i> {etf.name}</h3>
             </div>
             <Link href={`/stocks/${etf.slug}`}>ETF 상세 →</Link>
           </div>
 
           <div className="stock-etf-table">
             <div className="stock-etf-row header">
-              <strong>비교 항목</strong><strong>{stock.name}</strong><strong>{etf.name}</strong>
+              <strong>비교 항목</strong><strong>{stockName}</strong><strong>{etf.name}</strong>
             </div>
             <div className="stock-etf-row">
               <b>투자 단위</b>
@@ -122,13 +126,13 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
             </div>
             <div className="stock-etf-row">
               <b>선택 종목 편입</b>
-              <p>{stock.name} 자체에 100% 직접 노출</p>
-              <p>{inclusionText(symbol, etf.slug)}</p>
+              <p>{stockName} 자체에 100% 직접 노출</p>
+              <p>{inclusionText(symbol, holdings)}</p>
             </div>
             <div className="stock-etf-row">
               <b>집중도</b>
               <p>단일 기업 위험 100%</p>
-              <p>{concentrationText(etf.slug)}</p>
+              <p>{concentrationText(holdings)}</p>
             </div>
             <div className="stock-etf-row">
               <b>추가 확인 위험</b>
@@ -143,7 +147,7 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
           {selectedAsset && <MetricComparison stock={selectedAsset} etf={etf} />}
 
           <div className="stock-etf-decision">
-            <p><b>{stock.name} 쪽을 더 볼 때</b> 기업의 제품 경쟁력·고객·실적 변화를 직접 분석하고 싶은 경우</p>
+            <p><b>{stockName} 쪽을 더 볼 때</b> 기업의 제품 경쟁력·고객·실적 변화를 직접 분석하고 싶은 경우</p>
             <p><b>{etf.name} 쪽을 더 볼 때</b> 개별 기업보다 {themeLabel} 산업의 장기 방향에 투자하고 싶은 경우</p>
           </div>
 

@@ -1,6 +1,6 @@
 import globalLinksSnapshot from "@/data/generated/global_links.json";
 import holdingsSnapshot from "@/data/curated/etf_holdings.json";
-import { getAsset, type Asset } from "./catalog";
+import { getAlternatives, getAsset, getAssetByTicker, type Asset } from "./catalog";
 
 type GlobalRuleMatch = {
   id: string;
@@ -81,6 +81,29 @@ export function getGlobalStockInsight(symbol: string) {
     asOf: globalLinks.asOf,
     method: globalLinks.method,
   };
+}
+
+export function getRelatedEtfs(symbol: string) {
+  const normalizedSymbol = symbol.toUpperCase();
+  const selected = getAssetByTicker(normalizedSymbol, "KR");
+  const automatic = getGlobalStockInsight(normalizedSymbol).etfs;
+  const automaticBySlug = new Map(automatic.map((item) => [item.asset.slug, item]));
+  const curated = selected
+    ? getAlternatives(selected.slug)
+        .filter((item) => item.asset.type === "etf")
+        .map((item) => ({
+          asset: item.asset,
+          reason: item.reason,
+          themeLabel: automaticBySlug.get(item.asset.slug)?.themeLabel ?? "검수된 비교 대안",
+        }))
+    : [];
+  const seen = new Set<string>();
+
+  return [...curated, ...automatic].filter(({ asset }) => {
+    if (seen.has(asset.slug)) return false;
+    seen.add(asset.slug);
+    return true;
+  });
 }
 
 export function getEtfHoldings(slug: string) {

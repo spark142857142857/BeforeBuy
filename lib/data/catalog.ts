@@ -110,6 +110,14 @@ export const assets: Asset[] = [
   asset({ slug: "xlf", ticker: "XLF", name: "Financial Select ETF", nameEn: "Financial Select Sector SPDR", market: "US", type: "etf", sector: "금융", industry: "미국 금융 ETF", summary: "미국 은행, 보험, 결제 기업에 분산 투자합니다.", profile: "국내 금융주 대신 미국 금융 생태계 전반을 담는 대안", exposures: ["은행", "보험", "결제"], risks: ["미국 금리", "신용 사이클", "환율"], metrics: { per: 16.4, pbr: 2.1, revenueGrowth: 9.6, shareholderReturn: 2.5, volatility: 19, maxDrawdown: -18, return1y: 30.5, return1yKrw: 36.4 } }),
 ];
 
+const assetsBySlug = new Map(assets.map((item) => [item.slug, item]));
+const assetsByTicker = new Map<string, Asset>();
+const assetsByMarketTicker = new Map<string, Asset>();
+for (const item of assets) {
+  if (!assetsByTicker.has(item.ticker)) assetsByTicker.set(item.ticker, item);
+  assetsByMarketTicker.set(`${item.market}:${item.ticker}`, item);
+}
+
 export const alternatives: Record<string, Alternative[]> = {
   "samsung-electronics": [
     { slug: "sk-hynix", reason: "같은 메모리 업황에 노출되지만 HBM 비중이 더 높습니다.", common: "DRAM·NAND 가격과 AI 서버 수요의 영향을 함께 받습니다.", difference: "삼성전자는 모바일·가전·파운드리로 분산되고, SK하이닉스는 메모리 집중도가 높습니다." },
@@ -222,13 +230,13 @@ export const snapshotMeta = {
 };
 
 export function getAsset(slug: string) {
-  return assets.find((item) => item.slug === slug);
+  return assetsBySlug.get(slug);
 }
 
 export function getAssetByTicker(ticker: string, market?: Market) {
-  return assets.find(
-    (item) => item.ticker === ticker && (!market || item.market === market),
-  );
+  return market
+    ? assetsByMarketTicker.get(`${market}:${ticker}`)
+    : assetsByTicker.get(ticker);
 }
 
 export function getAlternatives(slug: string) {

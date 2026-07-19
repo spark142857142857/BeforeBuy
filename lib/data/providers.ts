@@ -30,7 +30,7 @@ export function isSnapshotStale(asOf: string, maxAgeDays = 7, now = new Date()) 
   const snapshotDate = new Date(`${asOf}T00:00:00Z`);
   if (Number.isNaN(snapshotDate.getTime())) return true;
   const ageDays = (now.getTime() - snapshotDate.getTime()) / 86_400_000;
-  return ageDays > maxAgeDays;
+  return ageDays < -1 || ageDays > maxAgeDays;
 }
 
 export async function getLatestSnapshot(provider?: MarketDataProvider) {

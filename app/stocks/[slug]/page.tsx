@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ComparisonDashboard } from "./ComparisonDashboard";
+import { DetailFooter, DetailHeader } from "@/components/DetailChrome";
 import { DomesticPeerSection } from "@/components/DomesticPeerSection";
 import { EtfHoldingsSection } from "@/components/EtfHoldingsSection";
 import { GlobalPeerEtfSection } from "@/components/GlobalPeerEtfSection";
@@ -43,15 +44,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="detail-page">
-      <header className="site-header detail-header">
-        <Link className="brand" href="/">
-          <span className="brand-mark">B</span><span>BEFORE BUY</span>
-        </Link>
-        <nav>
-          <Link href="/#industry-map">산업 맵</Link>
-          <Link href="/">다른 종목 찾기</Link>
-        </nav>
-      </header>
+      <DetailHeader showIndustryMap />
 
       <section className="asset-hero shell">
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><span>{selected.sector}</span><span>/</span><strong>{selected.name}</strong></div>
@@ -93,10 +86,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
         <StockEtfComparisonSection symbol={selected.ticker} compact />
       )}
 
-      <footer className="site-footer shell">
-        <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>
-        <p>투자 권유가 아닌 정보 비교 서비스입니다. 비교 지표는 출처 연결 전 큐레이션 참고값입니다.</p>
-      </footer>
+      <DetailFooter>투자 권유가 아닌 정보 비교 서비스입니다. 비교 지표는 출처 연결 전 큐레이션 참고값입니다.</DetailFooter>
     </main>
   );
 }
@@ -155,12 +145,7 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
 
   return (
     <main className="detail-page">
-      <header className="site-header detail-header">
-        <Link className="brand" href="/">
-          <span className="brand-mark">B</span><span>BEFORE BUY</span>
-        </Link>
-        <nav><Link href="/">다른 종목 찾기</Link></nav>
-      </header>
+      <DetailHeader />
 
       <section className="asset-hero shell basic-asset-hero">
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><span>{stock.market}</span><span>/</span><strong>{stock.name}</strong></div>
@@ -208,10 +193,7 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
       <GlobalPeerEtfSection symbol={stock.symbol} />
       <StockEtfComparisonSection symbol={stock.symbol} />
 
-      <footer className="site-footer shell">
-        <div className="brand"><span className="brand-mark">B</span><span>BEFORE BUY</span></div>
-        <p>투자 권유가 아닌 정보 비교 서비스입니다. 종목 목록은 로컬 배치 스냅샷을 사용합니다.</p>
-      </footer>
+      <DetailFooter>투자 권유가 아닌 정보 비교 서비스입니다. 종목 목록은 로컬 배치 스냅샷을 사용합니다.</DetailFooter>
     </main>
   );
 }

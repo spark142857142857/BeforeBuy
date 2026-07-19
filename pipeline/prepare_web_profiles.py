@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 MASTER_PATH = ROOT / "data" / "generated" / "kr_stocks.json"
 BUSINESS_PATH = ROOT / "data" / "generated" / "dart_business.json.gz"
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "business_profiles.json"
-EXCERPT_CHARS = 600
 PREFERRED_MANUAL_ALIASES = {
     "008355": "008350",  # 남선알미우 → 남선알미늄
     "007815": "007810",  # 코리아써우 → 코리아써키트
@@ -63,15 +62,15 @@ def preferred_aliases(
         for stock in stocks
         if stock["securityType"] == "common"
     }
-    stocks_by_symbol = {stock["symbol"]: stock for stock in stocks}
     aliases: dict[str, str] = {}
     unresolved: list[str] = []
-    for symbol, company in business_companies.items():
+    for stock in stocks:
+        symbol = stock["symbol"]
+        company = business_companies.get(symbol, {})
         if company.get("status") != "unmapped":
             continue
         target = PREFERRED_MANUAL_ALIASES.get(symbol)
         if not target:
-            stock = stocks_by_symbol[symbol]
             target = by_name.get(preferred_base_name(stock["name"]))
         if not target or business_companies.get(target, {}).get("status") != "ok":
             unresolved.append(symbol)
@@ -92,13 +91,22 @@ def no_annual_category(stock: dict[str, Any]) -> str:
 
 def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str, Any]:
     stocks = master["stocks"]
-    stocks_by_symbol = {stock["symbol"]: stock for stock in stocks}
     companies = business["companies"]
     aliases = preferred_aliases(stocks, companies)
     profiles: dict[str, dict[str, Any]] = {}
     unavailable: dict[str, dict[str, str]] = {}
 
-    for symbol, company in companies.items():
+    for stock in stocks:
+        symbol = stock["symbol"]
+        if symbol in aliases:
+            continue
+        company = companies.get(symbol)
+        if not company:
+            unavailable[symbol] = {
+                "category": "collection_error",
+                "reason": "not_collected",
+            }
+            continue
         if company.get("status") == "ok":
             profiles[symbol] = {
                 "reportPeriod": company["reportPeriod"],
@@ -107,7 +115,6 @@ def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str
                 "textConfidence": company["textConfidence"],
                 "textLength": company["textLength"],
                 "fallbackCount": company.get("fallbackCount", 0),
-                "excerpt": company["text"][:EXCERPT_CHARS],
             }
             if company.get("lastAttempt"):
                 profiles[symbol]["refreshWarning"] = {
@@ -115,12 +122,11 @@ def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str
                     "attemptedAt": company["lastAttempt"].get("attemptedAt", ""),
                 }
         elif company.get("status") == "no_annual_report":
-            stock = stocks_by_symbol[symbol]
             unavailable[symbol] = {
                 "category": no_annual_category(stock),
                 "reason": "annual_report_not_available",
             }
-        elif company.get("status") in {"error", "annual_report_unusable"}:
+        elif company.get("status") in {"error", "annual_report_unusable", "unmapped"}:
             unavailable[symbol] = {
                 "category": "collection_error",
                 "reason": company.get("status", "collection_error"),
@@ -131,10 +137,9 @@ def build_profiles(master: dict[str, Any], business: dict[str, Any]) -> dict[str
         categories[item["category"]] = categories.get(item["category"], 0) + 1
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "asOf": date.today().isoformat(),
         "source": "OpenDART annual business reports + KRX aliases",
-        "excerptChars": EXCERPT_CHARS,
         "counts": {
             "profiles": len(profiles),
             "preferredAliases": len(aliases),

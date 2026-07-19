@@ -13,7 +13,6 @@ type BusinessProfile = {
   textConfidence: "standard" | "low";
   textLength: number;
   fallbackCount: number;
-  excerpt: string;
   refreshWarning?: {
     status: string;
     attemptedAt: string;

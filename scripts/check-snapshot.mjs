@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import ts from "typescript";
 
 const [catalog, krxRaw, dartCorpRaw, profilesRaw, similarityRaw, globalLinksRaw, holdingsRaw] = await Promise.all([
   readFile(new URL("../lib/data/catalog.ts", import.meta.url), "utf8"),
@@ -15,13 +16,22 @@ const profiles = JSON.parse(profilesRaw);
 const similarity = JSON.parse(similarityRaw);
 const globalLinks = JSON.parse(globalLinksRaw);
 const holdings = JSON.parse(holdingsRaw);
-const assetCount = (catalog.match(/asset\(\{/g) ?? []).length;
-const assetSlugs = new Set([...catalog.matchAll(/asset\(\{ slug: "([^"]+)"/g)].map((match) => match[1]));
-const relationBlocks = (catalog.match(/^  "[a-z0-9-]+": \[$/gm) ?? []).length;
+const catalogJavaScript = ts.transpileModule(catalog, {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const catalogModule = await import(`data:text/javascript;base64,${Buffer.from(catalogJavaScript).toString("base64")}`);
+const { assets, alternatives, snapshotMeta } = catalogModule;
+const assetCount = assets.length;
+const assetSlugs = new Set(assets.map((asset) => asset.slug));
+const relationBlocks = Object.keys(alternatives).length;
 if (assetCount < 45) throw new Error(`Expected at least 45 curated assets, found ${assetCount}`);
 if (relationBlocks < 15) throw new Error(`Expected at least 15 Korean relation sets, found ${relationBlocks}`);
-if (!catalog.includes("return1yKrw")) throw new Error("KRW-converted returns are missing");
-if (!catalog.includes("fxAsOf")) throw new Error("FX snapshot date is missing");
+for (const asset of assets.filter((item) => item.market === "US")) {
+  if (!Number.isFinite(asset.metrics.return1yKrw)) {
+    throw new Error(`KRW-converted return is missing: ${asset.slug}`);
+  }
+}
+if (!snapshotMeta.fxAsOf) throw new Error("FX snapshot date is missing");
 if (krx.counts.total < 2000) throw new Error(`KRX master is unexpectedly small: ${krx.counts.total}`);
 if (!krx.stocks.some((stock) => stock.symbol === "005930" && stock.name === "삼성전자")) {
   throw new Error("KRX master does not include Samsung Electronics");
@@ -58,8 +68,11 @@ if (profiles.counts.profiles < 2600 || profiles.counts.preferredAliases < 100) {
 if (profiles.counts.profiles + profiles.counts.preferredAliases + profiles.counts.unavailable !== krx.counts.total) {
   throw new Error("Business profile, alias and unavailable counts do not cover the KRX master exactly");
 }
-if (profiles.excerptChars > 600 || typeof profiles.counts.refreshWarnings !== "number") {
-  throw new Error("Business profile size or refresh warning metadata is invalid");
+if (profiles.schemaVersion < 2 || typeof profiles.counts.refreshWarnings !== "number") {
+  throw new Error("Business profile schema or refresh warning metadata is invalid");
+}
+if (Object.values(profiles.profiles).some((profile) => "excerpt" in profile)) {
+  throw new Error("Web business profiles must not bundle DART report excerpts");
 }
 if (profiles.aliases["005935"] !== "005930") {
   throw new Error("Samsung Electronics preferred stock does not share the common stock profile");
@@ -193,10 +206,10 @@ for (const slug of requiredEtfs) {
 for (const slug of Object.keys(holdings.funds)) {
   if (!assetSlugs.has(slug)) throw new Error(`ETF holdings reference an unknown asset: ${slug}`);
 }
-if (!catalog.includes('ticker: "449450", name: "PLUS K방산"')) {
+if (!assets.some((asset) => asset.ticker === "449450" && asset.name === "PLUS K방산")) {
   throw new Error("449450 product identity is incorrect");
 }
-if (!catalog.includes('ticker: "266360", name: "KODEX K콘텐츠"')) {
+if (!assets.some((asset) => asset.ticker === "266360" && asset.name === "KODEX K콘텐츠")) {
   throw new Error("266360 product identity is incorrect");
 }
 console.log(

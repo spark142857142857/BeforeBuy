@@ -27,6 +27,7 @@ export type StockSearchResult = Pick<
 };
 
 const records = snapshot.stocks as KoreanStockMasterRecord[];
+const recordsBySymbol = new Map(records.map((record) => [record.symbol, record]));
 const curatedSlugByTicker = new Map(
   assets
     .filter((item) => item.market === "KR" && item.type === "stock")
@@ -51,16 +52,23 @@ function normalized(value: string) {
   return value.trim().replace(/\s+/g, "").toLocaleLowerCase("ko-KR");
 }
 
-function rank(record: KoreanStockMasterRecord, query: string) {
-  const symbol = record.symbol.toLowerCase();
-  const name = normalized(record.name);
-  if (symbol === query || name === query) return 0;
-  if (symbol.startsWith(query) || name.startsWith(query)) return 1;
-  if (name.includes(query)) return 2;
+const searchIndex = records.map((record) => ({
+  record,
+  symbol: record.symbol.toLowerCase(),
+  name: normalized(record.name),
+  sector: normalized(record.sector),
+  industry: normalized(record.industry),
+  products: normalized(record.products),
+}));
+
+function rank(item: (typeof searchIndex)[number], query: string) {
+  if (item.symbol === query || item.name === query) return 0;
+  if (item.symbol.startsWith(query) || item.name.startsWith(query)) return 1;
+  if (item.name.includes(query)) return 2;
   if (
-    normalized(record.sector).includes(query) ||
-    normalized(record.industry).includes(query) ||
-    normalized(record.products).includes(query)
+    item.sector.includes(query) ||
+    item.industry.includes(query) ||
+    item.products.includes(query)
   ) return 3;
   return 9;
 }
@@ -69,8 +77,8 @@ export function searchKoreanStocks(query: string, limit = 10) {
   const value = normalized(query);
   if (!value) return getFeaturedStockResults().slice(0, limit);
 
-  return records
-    .map((record) => ({ record, score: rank(record, value) }))
+  return searchIndex
+    .map((item) => ({ record: item.record, score: rank(item, value) }))
     .filter((item) => item.score < 9)
     .sort((a, b) => a.score - b.score || b.record.marketCap - a.record.marketCap || a.record.name.localeCompare(b.record.name, "ko"))
     .slice(0, limit)
@@ -80,7 +88,7 @@ export function searchKoreanStocks(query: string, limit = 10) {
 export function getFeaturedStockResults() {
   const featured = ["005930", "000660", "005380", "035420", "105560", "207940"];
   return featured
-    .map((symbol) => records.find((record) => record.symbol === symbol))
+    .map((symbol) => recordsBySymbol.get(symbol))
     .filter((record): record is KoreanStockMasterRecord => Boolean(record))
     .map(resultFor);
 }
@@ -89,11 +97,11 @@ export function getKoreanStockMaster(slug: string) {
   const match = /^kr-([0-9a-z]{6})$/i.exec(slug);
   if (!match) return undefined;
   const symbol = match[1].toUpperCase();
-  return records.find((record) => record.symbol === symbol);
+  return recordsBySymbol.get(symbol);
 }
 
 export function getKoreanStockBySymbol(symbol: string) {
-  return records.find((record) => record.symbol === symbol.toUpperCase());
+  return recordsBySymbol.get(symbol.toUpperCase());
 }
 
 export function getKoreanStockResultBySymbol(symbol: string) {
