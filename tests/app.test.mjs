@@ -35,10 +35,11 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.match(html, /동화약품/);
   assert.match(html, /종목 목록 연결/);
   assert.match(html, /DART 연간 사업 내용/);
-  assert.match(html, /연간 사업보고서 기반 국내 비교/);
-  assert.match(html, /자동 국내 유사 종목/);
+  assert.match(html, /사업 구조가 닮은 국내 기업/);
+  assert.match(html, /유사도 상위[\s\S]*5[\s\S]*개/);
   assert.match(html, /삼진제약/);
   assert.match(html, /DART 원문/);
+  assert.doesNotMatch(html, /class="business-excerpt"/);
   assert.match(html, /국내외 대안으로 범위 넓히기/);
   assert.match(html, /일라이 릴리/);
   assert.match(html, /TIGER 200 헬스케어/);
@@ -52,7 +53,7 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   const response = await render("/stocks/samsung-electronics");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /같이 검토할 대안[\s\S]*5[\s\S]*개/);
+  assert.match(html, /실제 매수 전 비교할 대안[\s\S]*5[\s\S]*개/);
   assert.match(html, /마이크론/);
   assert.match(html, /TSMC/);
   assert.match(html, /KODEX 반도체/);

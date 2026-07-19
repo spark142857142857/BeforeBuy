@@ -53,7 +53,7 @@ function MetricComparison({ stock, etf }: { stock: Asset; etf: Asset }) {
   );
 }
 
-export function StockEtfComparisonSection({ symbol }: { symbol: string }) {
+export function StockEtfComparisonSection({ symbol, compact = false }: { symbol: string; compact?: boolean }) {
   const stock = getKoreanStockBySymbol(symbol);
   const insight = getGlobalStockInsight(symbol);
   if (!stock || !insight.etfs.length) return null;
@@ -63,93 +63,97 @@ export function StockEtfComparisonSection({ symbol }: { symbol: string }) {
   const risks = companyRisks(selectedAsset, stock.industry);
 
   return (
-    <section className="stock-etf-comparison-section">
+    <section className={`stock-etf-comparison-section ${compact ? "compact" : ""}`}>
       <div className="shell">
         <div className="section-heading">
           <div>
             <p className="eyebrow">STOCK VS ETF</p>
             <h2>개별 종목과 ETF 직접 비교</h2>
           </div>
-          <p>어느 쪽이 더 좋다는 판정이 아니라, 기업 집중 투자와 산업 분산 투자의 구조적 차이를 확인합니다.</p>
+          <p>구성 종목·집중도·선택 종목 편입 비중을 기준으로 구조적 차이를 확인합니다.</p>
         </div>
 
-        <div className="stock-etf-principle">
-          <article>
-            <span>개별 종목</span>
-            <strong>{stock.name}의 실행력과 실적에 직접 노출</strong>
-            <p>기업 고유 전략이 성공할 때 수혜가 직접적이지만 제품·고객·경영 위험도 한 종목에 집중됩니다.</p>
-          </article>
-          <article>
-            <span>관련 ETF</span>
-            <strong>산업 방향에는 투자하되 기업 선택 위험을 분산</strong>
-            <p>여러 기업을 담지만 산업 전체 하락, 상위 종목 쏠림과 해외 ETF의 환율 위험은 남습니다.</p>
-          </article>
-        </div>
-
-        <div className="stock-etf-compare-stack">
-          {insight.etfs.map(({ asset: etf, themeLabel }) => {
-            const holdings = getEtfHoldings(etf.slug);
-            return (
-              <article className="stock-etf-card" key={etf.slug}>
-                <div className="stock-etf-card-heading">
-                  <div>
-                    <span>{themeLabel}</span>
-                    <h3>{stock.name} <i>vs</i> {etf.name}</h3>
-                  </div>
-                  <Link href={`/stocks/${etf.slug}`}>ETF 상세 →</Link>
-                </div>
-
-                <div className="stock-etf-table">
-                  <div className="stock-etf-row header">
-                    <strong>비교 항목</strong><strong>{stock.name}</strong><strong>{etf.name}</strong>
-                  </div>
-                  <div className="stock-etf-row">
-                    <b>투자 단위</b>
-                    <p>상장 기업 1개</p>
-                    <p>{holdings?.totalHoldings ? `전체 ${holdings.totalHoldings}개 구성` : "복수 기업 바스켓"}</p>
-                  </div>
-                  <div className="stock-etf-row">
-                    <b>핵심 노출</b>
-                    <div className="comparison-chip-row">{exposures.map((item) => <span key={item}>{item}</span>)}</div>
-                    <div className="comparison-chip-row">{etf.exposures.map((item) => <span key={item}>{item}</span>)}</div>
-                  </div>
-                  <div className="stock-etf-row">
-                    <b>선택 종목 편입</b>
-                    <p>{stock.name} 자체에 100% 직접 노출</p>
-                    <p>{inclusionText(symbol, etf.slug)}</p>
-                  </div>
-                  <div className="stock-etf-row">
-                    <b>집중도</b>
-                    <p>단일 기업 위험 100%</p>
-                    <p>{concentrationText(etf.slug)}</p>
-                  </div>
-                  <div className="stock-etf-row">
-                    <b>추가 확인 위험</b>
-                    <div className="comparison-risk-row">{risks.map((risk) => <span key={risk}>{risk}</span>)}</div>
-                    <div className="comparison-risk-row">
-                      {etf.risks.slice(0, 3).map((risk) => <span key={risk}>{risk}</span>)}
-                      {etf.market === "US" && <span>원/달러 환율</span>}
-                    </div>
-                  </div>
-                </div>
-
-                {selectedAsset && <MetricComparison stock={selectedAsset} etf={etf} />}
-
-                <div className="stock-etf-decision">
-                  <p><b>{stock.name} 쪽을 더 볼 때</b> 기업의 제품 경쟁력·고객·실적 변화를 직접 분석하고 싶은 경우</p>
-                  <p><b>{etf.name} 쪽을 더 볼 때</b> 개별 기업보다 {themeLabel} 산업의 장기 방향에 투자하고 싶은 경우</p>
-                </div>
-
-                {holdings && (
-                  <small className="stock-etf-source">
-                    ETF 구성 기준 {holdings.asOf} · 표시 구성은 전체 포트폴리오의 일부입니다.
-                  </small>
-                )}
-              </article>
-            );
-          })}
-        </div>
+        {compact ? (
+          <details className="stock-etf-disclosure">
+            <summary>
+              <span>관련 ETF {insight.etfs.length}개</span>
+              <strong>{insight.etfs.map(({ asset }) => asset.name).join(" · ")}</strong>
+              <small>구성·집중도·편입 비중 비교 펼치기</small>
+            </summary>
+            <div className="stock-etf-compare-stack">
+              {renderEtfCards()}
+            </div>
+          </details>
+        ) : (
+          <div className="stock-etf-compare-stack">
+            {renderEtfCards()}
+          </div>
+        )}
       </div>
     </section>
   );
+
+  function renderEtfCards() {
+    return insight.etfs.map(({ asset: etf, themeLabel }) => {
+      const holdings = getEtfHoldings(etf.slug);
+      return (
+        <article className="stock-etf-card" key={etf.slug}>
+          <div className="stock-etf-card-heading">
+            <div>
+              <span>{themeLabel}</span>
+              <h3>{stock.name} <i>vs</i> {etf.name}</h3>
+            </div>
+            <Link href={`/stocks/${etf.slug}`}>ETF 상세 →</Link>
+          </div>
+
+          <div className="stock-etf-table">
+            <div className="stock-etf-row header">
+              <strong>비교 항목</strong><strong>{stock.name}</strong><strong>{etf.name}</strong>
+            </div>
+            <div className="stock-etf-row">
+              <b>투자 단위</b>
+              <p>상장 기업 1개</p>
+              <p>{holdings?.totalHoldings ? `전체 ${holdings.totalHoldings}개 구성` : "복수 기업 바스켓"}</p>
+            </div>
+            <div className="stock-etf-row">
+              <b>핵심 노출</b>
+              <div className="comparison-chip-row">{exposures.map((item) => <span key={item}>{item}</span>)}</div>
+              <div className="comparison-chip-row">{etf.exposures.map((item) => <span key={item}>{item}</span>)}</div>
+            </div>
+            <div className="stock-etf-row">
+              <b>선택 종목 편입</b>
+              <p>{stock.name} 자체에 100% 직접 노출</p>
+              <p>{inclusionText(symbol, etf.slug)}</p>
+            </div>
+            <div className="stock-etf-row">
+              <b>집중도</b>
+              <p>단일 기업 위험 100%</p>
+              <p>{concentrationText(etf.slug)}</p>
+            </div>
+            <div className="stock-etf-row">
+              <b>추가 확인 위험</b>
+              <div className="comparison-risk-row">{risks.map((risk) => <span key={risk}>{risk}</span>)}</div>
+              <div className="comparison-risk-row">
+                {etf.risks.slice(0, 3).map((risk) => <span key={risk}>{risk}</span>)}
+                {etf.market === "US" && <span>원/달러 환율</span>}
+              </div>
+            </div>
+          </div>
+
+          {selectedAsset && <MetricComparison stock={selectedAsset} etf={etf} />}
+
+          <div className="stock-etf-decision">
+            <p><b>{stock.name} 쪽을 더 볼 때</b> 기업의 제품 경쟁력·고객·실적 변화를 직접 분석하고 싶은 경우</p>
+            <p><b>{etf.name} 쪽을 더 볼 때</b> 개별 기업보다 {themeLabel} 산업의 장기 방향에 투자하고 싶은 경우</p>
+          </div>
+
+          {holdings && (
+            <small className="stock-etf-source">
+              ETF 구성 기준 {holdings.asOf} · 표시 구성은 전체 포트폴리오의 일부입니다.
+            </small>
+          )}
+        </article>
+      );
+    });
+  }
 }

@@ -31,8 +31,8 @@ export function ComparisonDashboard({ selected, alternatives, fxAsOf }: { select
       <section className="alternative-section">
         <div className="shell">
           <div className="section-heading">
-            <div><p className="eyebrow">ALTERNATIVES</p><h2>같이 검토할 대안 {alternatives.length}개</h2></div>
-            <p>최대 4개를 골라 아래 표에서 비교할 수 있습니다.</p>
+            <div><p className="eyebrow">INVESTMENT ALTERNATIVES</p><h2>실제 매수 전 비교할 대안 {alternatives.length}개</h2></div>
+            <p>국내외 기업과 ETF 중 최대 4개를 골라 투자 특성과 위험을 직접 비교합니다.</p>
           </div>
           <div className="alternative-grid">
             {alternatives.map((item) => {

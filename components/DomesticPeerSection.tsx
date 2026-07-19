@@ -22,10 +22,10 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
       <div className="shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">ANNUAL BUSINESS PROFILE</p>
-            <h2>연간 사업보고서 기반 국내 비교</h2>
+            <p className="eyebrow">BUSINESS SIMILARITY</p>
+            <h2>사업 구조가 닮은 국내 기업</h2>
           </div>
-          <p>LLM 없이 사업 본문·다중 사업 노출·주요 제품·기업 규모를 로컬에서 계산했습니다.</p>
+          <p>이 목록은 매수 추천이 아니라 사업 노출과 제품이 비슷한 기업을 찾은 결과입니다.</p>
         </div>
 
         {insight.isAlias && businessStock && (
@@ -35,10 +35,13 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
         )}
 
         {insight.profile ? (
-          <div className="business-profile-card">
-            <div className="business-profile-meta">
-              <span>사업 기준 {insight.profile.reportPeriod}</span>
-              <span>접수일 {insight.profile.receiptDate}</span>
+          <div className="peer-source-strip">
+            <div>
+              <small>비교 근거</small>
+              <strong>{insight.profile.reportPeriod} 사업보고서 · KRX 주요 제품</strong>
+            </div>
+            <div className="peer-source-meta">
+              <span>접수 {insight.profile.receiptDate}</span>
               <span className={insight.profile.textConfidence === "low" ? "confidence-low" : ""}>
                 텍스트 신뢰도 {insight.profile.textConfidence === "low" ? "낮음" : "보통"}
               </span>
@@ -49,7 +52,6 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
               )}
               <a href={insight.profile.sourceUrl} target="_blank" rel="noreferrer">DART 원문 ↗</a>
             </div>
-            <p className="business-excerpt">{insight.profile.excerpt}</p>
           </div>
         ) : insight.unavailable ? (
           <div className="insight-notice caution">
@@ -62,8 +64,8 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
         {insight.peers.length > 0 && (
           <div className="domestic-peer-block">
             <div className="domestic-peer-heading">
-              <div><strong>자동 국내 유사 종목</strong><span>상위 {insight.peers.length}개</span></div>
-              <small>점수는 투자 매력도가 아니라 사업 유사도를 의미합니다.</small>
+              <div><strong>유사도 상위 {insight.peers.length}개</strong></div>
+              <small>규모가 다른 기업도 포함될 수 있으며, 점수는 투자 매력도를 의미하지 않습니다.</small>
             </div>
             <div className="domestic-peer-grid">
               {insight.peers.map((peer) => (

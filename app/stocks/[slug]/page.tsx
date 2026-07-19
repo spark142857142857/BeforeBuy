@@ -73,11 +73,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
       </section>
 
       {selected.market === "KR" && selected.type === "stock" && (
-        <>
-          <DomesticPeerSection symbol={selected.ticker} />
-          <GlobalPeerEtfSection symbol={selected.ticker} />
-          <StockEtfComparisonSection symbol={selected.ticker} />
-        </>
+        <DomesticPeerSection symbol={selected.ticker} />
       )}
 
       {selected.type === "etf" && <EtfHoldingsSection slug={selected.slug} />}
@@ -91,6 +87,10 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           <p>한국 종목을 검색하면 이 자산이 어떤 투자 대안으로 연결되는지 확인할 수 있습니다.</p>
           <Link className="primary-link" href="/">한국 종목 검색하기 →</Link>
         </section>
+      )}
+
+      {selected.market === "KR" && selected.type === "stock" && (
+        <StockEtfComparisonSection symbol={selected.ticker} compact />
       )}
 
       <footer className="site-footer shell">

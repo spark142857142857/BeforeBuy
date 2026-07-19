@@ -196,11 +196,13 @@ button { color: inherit; }
 
 .domestic-insight-section { padding: 72px 0; background: #f3f1e9; color: var(--ink); }
 .domestic-insight-section .section-heading { border-bottom-color: rgba(13, 32, 28, .18); }
-.business-profile-card { border: 1px solid rgba(13, 32, 28, .2); background: rgba(255,255,255,.58); }
-.business-profile-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 16px 20px; border-bottom: 1px solid rgba(13, 32, 28, .12); font-size: 12px; color: #55635f; }
-.business-profile-meta a { margin-left: auto; color: var(--ink); font-weight: 700; }
+.peer-source-strip { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 18px; border: 1px solid rgba(13, 32, 28, .18); background: rgba(255,255,255,.58); }
+.peer-source-strip > div:first-child small, .peer-source-strip > div:first-child strong { display: block; }
+.peer-source-strip > div:first-child small { margin-bottom: 4px; color: #708078; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.peer-source-strip > div:first-child strong { font-size: 13px; }
+.peer-source-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px 16px; color: #55635f; font-size: 11px; }
+.peer-source-meta a { color: var(--ink); font-weight: 800; }
 .confidence-low { color: #a04f18; font-weight: 800; }
-.business-excerpt { margin: 0; padding: 22px 20px; white-space: pre-line; line-height: 1.75; color: #34443f; max-height: 270px; overflow: auto; font-size: 14px; }
 .insight-notice { padding: 16px 20px; border-left: 4px solid var(--lime); background: rgba(255,255,255,.7); margin-bottom: 18px; line-height: 1.6; }
 .insight-notice.caution { border-left-color: #d98532; }
 .domestic-peer-block { margin-top: 32px; }
@@ -267,11 +269,15 @@ button { color: inherit; }
 .holding-source { display: inline-block; margin-top: 17px; color: var(--green); font-size: 12px; font-weight: 900; }
 
 .stock-etf-comparison-section { padding: 92px 0 100px; background: #f6f5ef; }
-.stock-etf-principle { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin-bottom: 24px; border: 1px solid var(--line); background: var(--line); }
-.stock-etf-principle article { min-height: 175px; padding: 25px; background: white; }
-.stock-etf-principle span { color: var(--green); font-size: 11px; font-weight: 900; letter-spacing: .08em; }
-.stock-etf-principle strong { display: block; margin-top: 26px; font-size: 19px; }
-.stock-etf-principle p { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.stock-etf-comparison-section.compact { padding: 72px 0 80px; }
+.stock-etf-disclosure { border: 1px solid var(--line); background: white; }
+.stock-etf-disclosure summary { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 20px 22px; cursor: pointer; list-style: none; }
+.stock-etf-disclosure summary::-webkit-details-marker { display: none; }
+.stock-etf-disclosure summary > span { color: var(--green); font-size: 11px; font-weight: 900; }
+.stock-etf-disclosure summary > strong { font-size: 14px; }
+.stock-etf-disclosure summary > small { color: var(--muted); font-size: 11px; }
+.stock-etf-disclosure[open] summary { border-bottom: 1px solid var(--line); }
+.stock-etf-disclosure .stock-etf-compare-stack { padding: 18px; }
 .stock-etf-compare-stack { display: grid; gap: 18px; }
 .stock-etf-card { border: 1px solid var(--line); background: white; }
 .stock-etf-card-heading { display: flex; justify-content: space-between; gap: 25px; align-items: end; padding: 24px; border-bottom: 1px solid var(--line); }
@@ -354,7 +360,10 @@ button { color: inherit; }
   .global-block-heading { display: block; }
   .global-block-heading small { display: block; margin-top: 8px; text-align: left; }
   .holding-list article { grid-template-columns: 34px 1fr auto; padding-left: 12px; padding-right: 12px; }
-  .stock-etf-principle, .stock-etf-decision, .stock-etf-metrics { grid-template-columns: 1fr; }
+  .stock-etf-decision, .stock-etf-metrics { grid-template-columns: 1fr; }
+  .peer-source-strip { align-items: flex-start; flex-direction: column; }
+  .peer-source-meta { justify-content: flex-start; }
+  .stock-etf-disclosure summary { grid-template-columns: 1fr; gap: 8px; }
   .stock-etf-card-heading { align-items: flex-start; flex-direction: column; }
   .stock-etf-table { padding: 0 14px; overflow-x: auto; }
   .stock-etf-row { grid-template-columns: 105px 210px 210px; min-width: 525px; }
