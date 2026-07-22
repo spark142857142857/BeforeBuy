@@ -61,10 +61,10 @@ export function SearchExplorer({ featured }: { featured: StockSearchResult[] }) 
           value={query}
           onChange={(event) => {
             const value = event.target.value;
+            requestId.current += 1;
             setQuery(value);
             setOpen(true);
             if (!value.trim()) {
-              requestId.current += 1;
               setResults(featured);
               setLoading(false);
               setActiveIndex(0);

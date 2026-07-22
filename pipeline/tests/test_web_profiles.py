@@ -115,3 +115,24 @@ class WebProfileTest(unittest.TestCase):
             result["unavailable"]["000001"],
             {"category": "collection_error", "reason": "not_collected"},
         )
+
+    def test_unmapped_common_stock_does_not_enter_preferred_alias_resolution(self) -> None:
+        master = {
+            "stocks": [
+                {
+                    "symbol": "000001",
+                    "name": "신규상장기업",
+                    "securityType": "common",
+                    "industry": "제조업",
+                }
+            ]
+        }
+        business = {"companies": {"000001": {"status": "unmapped"}}}
+
+        result = build_profiles(master, business)
+
+        self.assertEqual(result["aliases"], {})
+        self.assertEqual(
+            result["unavailable"]["000001"],
+            {"category": "collection_error", "reason": "unmapped"},
+        )

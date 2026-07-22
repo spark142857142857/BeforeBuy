@@ -73,7 +73,7 @@ export function ComparisonDashboard({ selected, alternatives, fxAsOf }: { select
               <tr><th>매출 성장률</th>{compared.map((item) => <MetricCell key={item.slug} value={pct(item.metrics.revenueGrowth)} />)}</tr>
               <tr><th>주주환원율</th>{compared.map((item) => <MetricCell key={item.slug} value={item.metrics.shareholderReturn.toFixed(1)} suffix="%" />)}</tr>
               <tr><th>1년 수익률</th>{compared.map((item) => <td key={item.slug} className={item.metrics.return1y >= 0 ? "positive" : "negative"}>{pct(item.metrics.return1y)}</td>)}</tr>
-              <tr className="krw-row"><th>1년 원화 수익률</th>{compared.map((item) => <td key={item.slug}>{item.market === "US" ? pct(item.metrics.return1yKrw ?? item.metrics.return1y) : "기준 통화와 동일"}</td>)}</tr>
+              <tr className="krw-row"><th>1년 원화 수익률</th>{compared.map((item) => <td key={item.slug}>{item.market === "US" ? (item.metrics.return1yKrw == null ? "자료 없음" : pct(item.metrics.return1yKrw)) : "기준 통화와 동일"}</td>)}</tr>
               <tr><th>연환산 변동성</th>{compared.map((item) => <MetricCell key={item.slug} value={item.metrics.volatility.toFixed(1)} suffix="%" />)}</tr>
               <tr><th>최대 낙폭</th>{compared.map((item) => <td className="negative" key={item.slug}>{pct(item.metrics.maxDrawdown)}</td>)}</tr>
             </tbody>

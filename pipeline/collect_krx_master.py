@@ -14,6 +14,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "kr_stocks.json"
 SUPPORTED_MARKETS = {"KOSPI", "KOSDAQ", "KONEX"}
+MARKET_ALIASES = {"KOSDAQ GLOBAL": "KOSDAQ"}
 COMMON_NAMES_ENDING_WITH_U = {"성우", "에코글로우", "이오플로우"}
 
 
@@ -65,7 +66,8 @@ def normalize(frame: pd.DataFrame) -> list[dict[str, Any]]:
     for _, row in frame.iterrows():
         raw_symbol = text(first_existing(row, "Code", "Symbol", "Ticker"))
         name = text(first_existing(row, "Name", "CodeName"))
-        market = text(first_existing(row, "Market", "MarketName")).upper()
+        raw_market = text(first_existing(row, "Market", "MarketName")).upper()
+        market = MARKET_ALIASES.get(raw_market, raw_market)
         industry = text(first_existing(row, "Industry"))
 
         if not raw_symbol or not name or market not in SUPPORTED_MARKETS:
@@ -103,6 +105,8 @@ def validate(records: list[dict[str, Any]]) -> None:
         raise RuntimeError("Duplicate symbols remain after normalization")
     if "005930" not in symbols:
         raise RuntimeError("Samsung Electronics (005930) is missing")
+    if "196170" not in symbols:
+        raise RuntimeError("KOSDAQ GLOBAL stocks were not normalized correctly")
     if any(not re.fullmatch(r"[0-9A-Z]{6}", symbol) for symbol in symbols):
         raise RuntimeError("Invalid Korean stock symbol detected")
     if sum(bool(record["industry"]) for record in records) < 2_500:

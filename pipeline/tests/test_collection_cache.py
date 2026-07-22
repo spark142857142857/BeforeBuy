@@ -21,6 +21,13 @@ class CollectionCacheTest(unittest.TestCase):
             cache_is_fresh(company, today=date(2027, 1, 1), max_age_days=120)
         )
 
+    def test_future_dated_cache_is_not_treated_as_fresh(self):
+        company = {"status": "ok", "updatedAt": "2027-01-01"}
+
+        self.assertFalse(
+            cache_is_fresh(company, today=date(2026, 7, 22), max_age_days=120)
+        )
+
     def test_failed_refresh_preserves_last_good_company(self):
         previous = {
             "status": "ok",

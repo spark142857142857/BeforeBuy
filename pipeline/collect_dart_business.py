@@ -62,7 +62,8 @@ def cache_is_fresh(
         updated_at = datetime.strptime(company["updatedAt"], "%Y-%m-%d").date()
     except (KeyError, TypeError, ValueError):
         return False
-    return ((today or date.today()) - updated_at).days <= max_age_days
+    age_days = ((today or date.today()) - updated_at).days
+    return 0 <= age_days <= max_age_days
 
 
 def merge_company_result(

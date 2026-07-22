@@ -40,6 +40,11 @@ if (new Set(krx.stocks.map((stock) => stock.symbol)).size !== krx.stocks.length)
   throw new Error("KRX master contains duplicate symbols");
 }
 const stockSymbols = new Set(krx.stocks.map((stock) => stock.symbol));
+for (const asset of assets.filter((item) => item.market === "KR" && item.type === "stock")) {
+  if (!stockSymbols.has(asset.ticker)) {
+    throw new Error(`Curated Korean stock is missing from the KRX master: ${asset.ticker} (${asset.name})`);
+  }
+}
 if (krx.stocks.filter((stock) => stock.industry).length < 2500) {
   throw new Error("KRX master industry coverage is unexpectedly low");
 }

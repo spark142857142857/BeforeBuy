@@ -10,6 +10,9 @@ uv run python pipeline/collect_krx_master.py
 ```
 
 결과는 `data/generated/kr_stocks.json`에 저장하며 이 파일만 GitHub에 커밋합니다.
+FinanceDataReader가 반환하는 `KOSDAQ GLOBAL` 시장 구분은 상장 시장 기준
+`KOSDAQ`으로 정규화합니다. 대표 글로벌 세그먼트 종목과 큐레이션된 한국 종목이
+마스터에서 빠지면 스냅샷 검증이 실패합니다.
 
 ## DART 기업 매핑과 연간 사업 내용
 

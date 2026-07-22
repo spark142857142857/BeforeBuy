@@ -32,6 +32,13 @@ test("search API finds stocks outside the curated demo catalog", async () => {
   assert.ok(payload.results.some((stock) => stock.symbol === "000020" && stock.slug === "kr-000020"));
 });
 
+test("search API includes KOSDAQ GLOBAL stocks after market normalization", async () => {
+  const response = await render("/api/stocks/search?q=196170");
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.ok(payload.results.some((stock) => stock.symbol === "196170" && stock.name === "알테오젠"));
+});
+
 test("basic stock page includes annual business profile and domestic peers", async () => {
   const response = await render("/stocks/kr-000020");
   assert.equal(response.status, 200);

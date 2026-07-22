@@ -65,6 +65,8 @@ def preferred_aliases(
     aliases: dict[str, str] = {}
     unresolved: list[str] = []
     for stock in stocks:
+        if stock["securityType"] != "preferred":
+            continue
         symbol = stock["symbol"]
         company = business_companies.get(symbol, {})
         if company.get("status") != "unmapped":
