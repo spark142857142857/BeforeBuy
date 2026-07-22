@@ -129,6 +129,7 @@ button { color: inherit; }
 .market-badge.global { color: var(--blue); border-color: #bac5e8; }
 .alt-card-top button { border: 1px solid var(--line); background: transparent; padding: 7px 9px; font-size: 10px; cursor: pointer; }
 .alternative-card.selected .alt-card-top button { background: var(--forest); color: white; border-color: var(--forest); }
+.alt-card-top button:disabled { cursor: not-allowed; opacity: .55; }
 .alt-name { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 25px; }
 .alt-name h3 { font-size: 22px; margin: 0; letter-spacing: -.03em; }
 .alt-name span { color: var(--muted); font-size: 11px; }

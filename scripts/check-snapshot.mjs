@@ -48,6 +48,14 @@ for (const asset of assets.filter((item) => item.market === "KR" && item.type ==
 if (krx.stocks.filter((stock) => stock.industry).length < 2500) {
   throw new Error("KRX master industry coverage is unexpectedly low");
 }
+const dartSymbols = new Set(Object.keys(dartCorp.companies));
+if (
+  dartSymbols.size !== dartCorp.counts.mapped ||
+  [...dartSymbols].some((symbol) => !stockSymbols.has(symbol)) ||
+  dartCorp.counts.mapped + dartCorp.counts.unmapped !== stockSymbols.size
+) {
+  throw new Error("DART mapped and unmapped counts do not cover the KRX master exactly");
+}
 for (const symbol of ["138040", "369370"]) {
   if (krx.stocks.find((stock) => stock.symbol === symbol)?.securityType !== "common") {
     throw new Error(`A common stock is misclassified as a REIT: ${symbol}`);
@@ -72,6 +80,21 @@ if (profiles.counts.profiles < 2600 || profiles.counts.preferredAliases < 100) {
 }
 if (profiles.counts.profiles + profiles.counts.preferredAliases + profiles.counts.unavailable !== krx.counts.total) {
   throw new Error("Business profile, alias and unavailable counts do not cover the KRX master exactly");
+}
+const profileSymbols = new Set(Object.keys(profiles.profiles));
+const aliasSymbols = new Set(Object.keys(profiles.aliases));
+const unavailableSymbols = new Set(Object.keys(profiles.unavailable));
+for (const symbol of stockSymbols) {
+  const memberships = [profileSymbols, aliasSymbols, unavailableSymbols].filter((group) => group.has(symbol)).length;
+  if (memberships !== 1) throw new Error(`Business profile coverage is not exclusive: ${symbol}`);
+}
+for (const [symbol, target] of Object.entries(profiles.aliases)) {
+  if (
+    krx.stocks.find((stock) => stock.symbol === symbol)?.securityType !== "preferred" ||
+    !profileSymbols.has(target)
+  ) {
+    throw new Error(`Preferred-share profile alias is invalid: ${symbol} -> ${target}`);
+  }
 }
 if (profiles.schemaVersion < 2 || typeof profiles.counts.refreshWarnings !== "number") {
   throw new Error("Business profile schema or refresh warning metadata is invalid");
@@ -118,6 +141,14 @@ for (const [symbol, candidates] of Object.entries(similarity.similar)) {
       if (!Number.isFinite(candidate[key]) || candidate[key] < 0 || candidate[key] > 1) {
         throw new Error(`Similarity score is outside 0..1: ${symbol} -> ${candidate.symbol} ${key}`);
       }
+    }
+    if (
+      !candidate.sharedExposures?.length &&
+      !candidate.sharedTerms?.length &&
+      candidate.textSimilarity < 0.35 &&
+      candidate.confidence !== "low"
+    ) {
+      throw new Error(`Similarity evidence is too weak without a low-confidence disclosure: ${symbol} -> ${candidate.symbol}`);
     }
   }
 }
@@ -178,11 +209,26 @@ if (!similarity.similar["329180"]?.slice(0, 5).some((candidate) => candidate.sym
 if (!similarity.similar["090430"]?.slice(0, 3).some((candidate) => candidate.symbol === "051900")) {
   throw new Error("Amorepacific must include LG Household & Health Care in its top three peers");
 }
+if (!similarity.similar["035900"]?.slice(0, 3).every((candidate) => ["122870", "041510", "352820"].includes(candidate.symbol))) {
+  throw new Error("JYP Entertainment must rank YG, SM and HYBE as its top three peers");
+}
+if (!similarity.similar["086520"]?.slice(0, 3).some((candidate) => ["450080", "066970"].includes(candidate.symbol))) {
+  throw new Error("EcoPro must include a major battery-material peer in its top three");
+}
+if (!similarity.similar["247540"]?.slice(0, 5).some((candidate) => candidate.symbol === "066970")) {
+  throw new Error("EcoPro BM must include L&F among its top five battery peers");
+}
+if (similarity.similar["196170"]?.slice(0, 5).some((candidate) => !candidate.sharedExposures?.includes("바이오"))) {
+  throw new Error("Alteogen top five peers must share biotechnology exposure");
+}
 if (globalLinks.method.llmUsed !== false || globalLinks.counts.mappedStocks < 400) {
   throw new Error(`Global link coverage or method is invalid: ${JSON.stringify(globalLinks.counts)}`);
 }
 for (const [symbol, matches] of Object.entries(globalLinks.links)) {
   if (!stockSymbols.has(symbol)) throw new Error(`Global link source is unknown: ${symbol}`);
+  if (matches.length > 2 || new Set(matches.map((match) => match.id)).size !== matches.length) {
+    throw new Error(`Global link theme count or identity is invalid: ${symbol}`);
+  }
   for (const match of matches) {
     if (!match.reason || !match.matchedTerms.length) {
       throw new Error(`Global link evidence is missing: ${symbol} ${match.id}`);

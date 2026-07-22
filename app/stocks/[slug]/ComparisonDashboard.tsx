@@ -37,11 +37,19 @@ export function ComparisonDashboard({ selected, alternatives, fxAsOf }: { select
           <div className="alternative-grid">
             {alternatives.map((item) => {
               const isActive = active.includes(item.slug);
+              const limitReached = active.length >= 4;
               return (
                 <article className={`alternative-card ${isActive ? "selected" : ""}`} key={item.slug}>
                   <div className="alt-card-top">
                     <MarketBadge asset={item.asset} />
-                    <button type="button" aria-pressed={isActive} onClick={() => toggle(item.slug)}>{isActive ? "비교 중 ✓" : "비교 추가"}</button>
+                    <button
+                      type="button"
+                      aria-pressed={isActive}
+                      disabled={!isActive && limitReached}
+                      onClick={() => toggle(item.slug)}
+                    >
+                      {isActive ? "비교 중 ✓" : limitReached ? "최대 4개" : "비교 추가"}
+                    </button>
                   </div>
                   <div className="alt-name"><h3>{item.asset.name}</h3><span>{item.asset.ticker}</span></div>
                   <p className="alt-reason">{item.reason}</p>

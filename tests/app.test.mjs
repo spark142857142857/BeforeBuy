@@ -33,10 +33,20 @@ test("search API finds stocks outside the curated demo catalog", async () => {
 });
 
 test("search API includes KOSDAQ GLOBAL stocks after market normalization", async () => {
-  const response = await render("/api/stocks/search?q=196170");
-  assert.equal(response.status, 200);
-  const payload = await response.json();
-  assert.ok(payload.results.some((stock) => stock.symbol === "196170" && stock.name === "알테오젠"));
+  const [byName, bySymbol] = await Promise.all([
+    render("/api/stocks/search?q=알테오젠"),
+    render("/api/stocks/search?q=196170"),
+  ]);
+  assert.equal(byName.status, 200);
+  assert.equal(bySymbol.status, 200);
+  const namePayload = await byName.json();
+  const symbolPayload = await bySymbol.json();
+  const nameResult = namePayload.results.find((stock) => stock.symbol === "196170");
+  const symbolResult = symbolPayload.results.find((stock) => stock.symbol === "196170");
+
+  assert.equal(nameResult?.name, "알테오젠");
+  assert.equal(nameResult?.slug, "alteogen");
+  assert.equal(symbolResult?.slug, "alteogen");
 });
 
 test("basic stock page includes annual business profile and domestic peers", async () => {
@@ -89,6 +99,21 @@ test("curated ETF alternatives also appear in the direct comparison section", as
   const html = await response.text();
   assert.match(html, /개별 종목과 ETF 직접 비교/);
   assert.match(html, /알테오젠[\s\S]*TIGER 200 헬스케어/);
+});
+
+test("restored KOSDAQ GLOBAL detail includes the complete comparison path", async () => {
+  const response = await render("/stocks/alteogen");
+  assert.equal(response.status, 200);
+  const html = withoutReactMarkers(await response.text());
+
+  assert.match(html, /알테오젠/);
+  assert.match(html, /2025\.12 사업보고서 · KRX 주요 제품/);
+  assert.match(html, /DART 원문/);
+  assert.match(html, /사업 구조가 닮은 국내 기업/);
+  assert.match(html, /지씨셀/);
+  assert.match(html, /일라이 릴리/);
+  assert.match(html, /TIGER 200 헬스케어/);
+  assert.match(html, /개별 종목과 ETF 직접 비교/);
 });
 
 test("basic detail discloses global and ETF coverage gaps", async () => {

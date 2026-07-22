@@ -136,3 +136,41 @@ class WebProfileTest(unittest.TestCase):
             result["unavailable"]["000001"],
             {"category": "collection_error", "reason": "unmapped"},
         )
+
+    def test_unmapped_preferred_share_uses_the_common_stock_profile(self) -> None:
+        master = {
+            "stocks": [
+                {
+                    "symbol": "005930",
+                    "name": "삼성전자",
+                    "securityType": "common",
+                    "industry": "반도체 제조업",
+                },
+                {
+                    "symbol": "005935",
+                    "name": "삼성전자우",
+                    "securityType": "preferred",
+                    "industry": "",
+                },
+            ]
+        }
+        business = {
+            "companies": {
+                "005930": {
+                    "status": "ok",
+                    "reportPeriod": "2025.12",
+                    "receiptDate": "2026-03-18",
+                    "sourceUrl": "https://dart.example/005930",
+                    "textConfidence": "standard",
+                    "textLength": 5_000,
+                    "text": "반도체 사업 내용" * 1_000,
+                },
+                "005935": {"status": "unmapped"},
+            }
+        }
+
+        result = build_profiles(master, business)
+
+        self.assertEqual(result["aliases"]["005935"], "005930")
+        self.assertIn("005930", result["profiles"])
+        self.assertNotIn("005935", result["unavailable"])
