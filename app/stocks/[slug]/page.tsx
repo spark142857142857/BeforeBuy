@@ -56,7 +56,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           </div>
           <div className="snapshot-card">
             <span className="reference-dot" />
-            <div><strong>큐레이션 참고값</strong><small>{snapshotMeta.asOf} 검수 기준</small></div>
+            <div><strong>데이터 기준</strong><small>{snapshotMeta.asOf}</small></div>
           </div>
         </div>
         <p className="asset-summary">{selected.summary}</p>
@@ -64,10 +64,6 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           {selected.exposures.map((item) => <span key={item}>{item}</span>)}
         </div>
       </section>
-
-      {selected.market === "KR" && selected.type === "stock" && (
-        <DomesticPeerSection symbol={selected.ticker} />
-      )}
 
       {selected.type === "etf" && <EtfHoldingsSection slug={selected.slug} />}
 
@@ -86,7 +82,11 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
         <StockEtfComparisonSection symbol={selected.ticker} compact />
       )}
 
-      <DetailFooter>투자 권유가 아닌 정보 비교 서비스입니다. 비교 지표는 출처 연결 전 큐레이션 참고값입니다.</DetailFooter>
+      {selected.market === "KR" && selected.type === "stock" && (
+        <DomesticPeerSection symbol={selected.ticker} />
+      )}
+
+      <DetailFooter>비교를 돕기 위한 참고 정보입니다.</DetailFooter>
     </main>
   );
 }

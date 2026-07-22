@@ -22,10 +22,8 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
       <div className="shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">BUSINESS SIMILARITY</p>
-            <h2>사업 구조가 닮은 국내 기업</h2>
+            <h2>사업이 비슷한 국내 기업</h2>
           </div>
-          <p>이 목록은 매수 추천이 아니라 사업 노출과 제품이 비슷한 기업을 찾은 결과입니다.</p>
         </div>
 
         {insight.isAlias && businessStock && (
@@ -37,7 +35,7 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
         {insight.profile ? (
           <div className="peer-source-strip">
             <div>
-              <small>비교 근거</small>
+              <small>사용한 데이터</small>
               <strong>{insight.profile.reportPeriod} 사업보고서 · KRX 주요 제품</strong>
             </div>
             <div className="peer-source-meta">
@@ -64,8 +62,7 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
         {insight.peers.length > 0 && (
           <div className="domestic-peer-block">
             <div className="domestic-peer-heading">
-              <div><strong>유사도 상위 {insight.peers.length}개</strong></div>
-              <small>규모가 다른 기업도 포함될 수 있으며, 점수는 투자 매력도를 의미하지 않습니다.</small>
+              <div><strong>비슷한 기업 {insight.peers.length}개</strong></div>
             </div>
             <div className="domestic-peer-grid">
               {insight.peers.map((peer) => (

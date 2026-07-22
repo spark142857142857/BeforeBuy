@@ -71,10 +71,8 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
       <div className="shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">STOCK VS ETF</p>
-            <h2>개별 종목과 ETF 직접 비교</h2>
+            <h2>종목과 ETF 비교</h2>
           </div>
-          <p>구성 종목·집중도·선택 종목 편입 비중을 기준으로 구조적 차이를 확인합니다.</p>
         </div>
 
         {compact ? (
@@ -82,7 +80,7 @@ export function StockEtfComparisonSection({ symbol, compact = false }: { symbol:
             <summary>
               <span>관련 ETF {relatedEtfs.length}개</span>
               <strong>{relatedEtfs.map(({ asset }) => asset.name).join(" · ")}</strong>
-              <small>구성·집중도·편입 비중 비교 펼치기</small>
+              <small>구성과 비중 보기</small>
             </summary>
             <div className="stock-etf-compare-stack">
               {renderEtfCards()}

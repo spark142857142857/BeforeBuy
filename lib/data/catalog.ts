@@ -1,3 +1,5 @@
+import { buildAlternativeRelation, scoreAlternativeCandidate } from "./alternative-relations";
+
 export type Market = "KR" | "US";
 export type AssetType = "stock" | "etf";
 
@@ -35,7 +37,17 @@ export type Alternative = {
   reason: string;
   common: string;
   difference: string;
+  relationType?: "direct" | "structural-comparison" | "exposure-shift" | "diversified";
+  sharedDrivers?: string[];
+  strongerExposures?: string[];
+  weakerExposures?: string[];
+  newRisks?: string[];
+  tradeoffSummary?: string;
+  confidence?: "high" | "medium" | "limited";
+  evidence?: string[];
 };
+
+type AlternativeSeed = Pick<Alternative, "slug"> & Partial<Omit<Alternative, "slug">>;
 
 const baseMetrics: Metrics = {
   per: 18,
@@ -118,24 +130,10 @@ for (const item of assets) {
   assetsByMarketTicker.set(`${item.market}:${item.ticker}`, item);
 }
 
-export const alternatives: Record<string, Alternative[]> = {
-  "samsung-electronics": [
-    { slug: "sk-hynix", reason: "같은 메모리 업황에 노출되지만 HBM 비중이 더 높습니다.", common: "DRAM·NAND 가격과 AI 서버 수요의 영향을 함께 받습니다.", difference: "삼성전자는 모바일·가전·파운드리로 분산되고, SK하이닉스는 메모리 집중도가 높습니다." },
-    { slug: "micron", reason: "미국 상장 메모리 순수 기업으로 주주환원과 수익성 차이를 비교하기 좋습니다.", common: "글로벌 DRAM·NAND 시장의 공급 조절과 가격 사이클을 공유합니다.", difference: "마이크론은 사업이 메모리에 집중되고 달러·미국 정책에 노출됩니다." },
-    { slug: "tsmc", reason: "반도체 제조 경쟁력에 투자하되 메모리가 아닌 첨단 파운드리에 노출됩니다.", common: "AI 반도체 수요와 대규모 설비투자가 실적을 좌우합니다.", difference: "TSMC는 고객 칩을 위탁생산하는 순수 파운드리이며 지정학적 위험이 큽니다." },
-    { slug: "kodex-semiconductor", reason: "삼성전자 한 종목 대신 국내 반도체 생태계로 분산합니다.", common: "국내 메모리 업황과 반도체 수출 회복의 수혜를 받습니다.", difference: "장비·소재 기업을 함께 담아 단일 기업 실행 위험을 낮춥니다." },
-    { slug: "soxx", reason: "AI 칩·장비·파운드리를 포함한 글로벌 반도체 분산 대안입니다.", common: "반도체 업황과 AI 인프라 투자에 함께 노출됩니다.", difference: "미국 기술주 밸류에이션과 환율 영향이 추가됩니다." },
-  ],
-  "sk-hynix": [
-    { slug: "samsung-electronics", reason: "같은 국내 메모리 대형주이면서 사업 분산 효과를 비교할 수 있습니다.", common: "HBM·DRAM 수요와 메모리 가격 사이클을 공유합니다.", difference: "삼성전자는 모바일·가전·파운드리 현금흐름이 완충 역할을 합니다." },
-    { slug: "micron", reason: "HBM을 포함한 메모리 순수 노출을 글로벌 기준으로 비교합니다.", common: "DRAM·NAND 공급 규율과 AI 메모리 수요에 민감합니다.", difference: "상장 시장, 환율, 자본환원 정책이 다릅니다." },
-    { slug: "nvidia", reason: "AI 인프라 성장에 더 상류인 연산 플랫폼으로 투자하는 대안입니다.", common: "AI 데이터센터 투자 확대가 핵심 성장 동력입니다.", difference: "엔비디아는 메모리 제조가 아니라 GPU 설계와 소프트웨어 플랫폼 기업입니다." },
-    { slug: "soxx", reason: "HBM 한 축에서 글로벌 반도체 가치사슬 전체로 분산합니다.", common: "AI 반도체 투자 사이클을 공유합니다.", difference: "설계·장비·파운드리까지 포함해 개별 메모리 가격 위험을 낮춥니다." },
-  ],
-  "db-hitek": [
-    { slug: "tsmc", reason: "파운드리라는 공통 사업을 첨단 공정 글로벌 리더와 비교합니다.", common: "설비 가동률과 고객의 칩 수요가 수익성을 좌우합니다.", difference: "DB하이텍은 성숙 공정, TSMC는 첨단 공정 중심입니다." },
-    { slug: "kodex-semiconductor", reason: "중형 파운드리 한 종목 대신 국내 반도체 전반에 분산합니다.", common: "국내 반도체 수출과 설비투자에 노출됩니다.", difference: "ETF는 메모리·장비·소재까지 담습니다." },
-  ],
+export const alternatives: Record<string, AlternativeSeed[]> = {
+  "samsung-electronics": [],
+  "sk-hynix": [],
+  "db-hitek": [],
   "hyundai-motor": [
     { slug: "kia", reason: "같은 그룹 플랫폼을 쓰지만 제품 믹스와 자본효율이 다릅니다.", common: "북미 판매, 하이브리드 경쟁력, 관세 위험을 공유합니다.", difference: "현대차는 금융·제네시스·수소 등 사업 범위가 더 넓습니다." },
     { slug: "toyota", reason: "하이브리드 중심 글로벌 완성차 전략을 비교하기 좋습니다.", common: "하이브리드 수요와 글로벌 생산망이 핵심입니다.", difference: "토요타는 엔화, 현대차는 원화와 북미 투자에 더 민감합니다." },
@@ -240,9 +238,43 @@ export function getAssetByTicker(ticker: string, market?: Market) {
 }
 
 export function getAlternatives(slug: string) {
+  const selected = getAsset(slug);
+  const usesSectorProfile = selected?.market === "KR" && selected.type === "stock" && selected.sector === "반도체";
+  if (selected && usesSectorProfile) {
+    // These are caps, not quotas. A category is omitted when the available
+    // candidates do not have enough business evidence to support it.
+    const relationLimits: Record<NonNullable<Alternative["relationType"]>, number> = {
+      direct: 2,
+      "structural-comparison": 2,
+      "exposure-shift": 1,
+      diversified: 1,
+    };
+    const minimumScores: Record<NonNullable<Alternative["relationType"]>, number> = {
+      direct: 30,
+      // A shared value-chain role plus a shared industry driver is enough for
+      // a structural comparison, but not for a direct peer.
+      "structural-comparison": 18,
+      "exposure-shift": 24,
+      // An ETF is judged by its sector coverage and remains an optional,
+      // single diversification choice rather than a forced second peer.
+      diversified: 0,
+    };
+    const candidates = assets
+      .filter((asset) => asset.slug !== selected.slug && asset.sector === selected.sector)
+      .map((asset) => ({ ...buildAlternativeRelation(selected, asset), asset }));
+    return (["direct", "structural-comparison", "exposure-shift", "diversified"] as const).flatMap((type) => candidates
+      .filter((item) => item.relationType === type && scoreAlternativeCandidate(selected, item.asset) >= minimumScores[type])
+      .sort((left, right) => scoreAlternativeCandidate(selected, right.asset) - scoreAlternativeCandidate(selected, left.asset))
+      .slice(0, relationLimits[type]));
+  }
   return (alternatives[slug] ?? [])
-    .map((relation) => ({ ...relation, asset: getAsset(relation.slug) }))
-    .filter((item): item is Alternative & { asset: Asset } => Boolean(item.asset));
+    .map((relation) => {
+      const asset = getAsset(relation.slug);
+      if (!asset) return undefined;
+      if (!relation.reason || !relation.common || !relation.difference) return undefined;
+      return { ...relation, reason: relation.reason, common: relation.common, difference: relation.difference, asset };
+    })
+    .filter((item): item is Alternative & { asset: Asset } => Boolean(item));
 }
 
 export function getKoreanStocks() {

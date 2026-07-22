@@ -52,6 +52,39 @@ uv run python pipeline/prepare_web_profiles.py
 섞이지 않도록 사용할 수 없는 이유와 자산 유형을 기록합니다. 현재 KRX 마스터를
 기준으로 순회하므로 이전 배치에 남은 상장폐지 종목은 웹 스냅샷에서 제외됩니다.
 
+## 전체 종목 분류 스냅샷
+
+```powershell
+uv run python pipeline/build_company_taxonomy.py
+```
+
+`data/generated/kr_company_taxonomy.json`은 모든 보통주에 대해 외부 기준 업종,
+`WICS 대분류 → 서비스 비교 섹터 → 세부 사업군 → 사업 태그` 계층과 근거
+메타데이터를 분리해 저장합니다. 한 기업은 기본 후보군을 위한 주력 비교 섹터를
+하나만 갖되, 부수 사업 노출은 별도 배열에 보관합니다.
+세부 사업군이 여러 개인 경우에는 `primaryRole` 하나와 `secondaryRoles`를 함께
+기록합니다. 주력 역할만 직접 peer 후보군의 기본 축으로 사용하고, 보조 역할은
+사업 연결을 설명하는 용도로 남깁니다.
+WICS의 공개 방법론은 대분류 구조 참고 자료로만 사용합니다. 종목별 WICS 분류값을
+수집하거나 재배포하지 않으며, 서비스의 결과는 KRX 업종·주요 제품과 DART 연간
+사업보고서 메타데이터를 바탕으로 재현 가능하게 생성합니다.
+
+초기 배치에서는 KRX 업종·주요 제품으로 넓은 비교 섹터와 보수적인 태그만 생성합니다.
+DART 본문은 보고서 기준일과 품질을 함께 저장하고, 이후 세부 섹터 규칙을 검증할 때만
+명시적 사업 근거로 추가합니다. 근거가 부족한 종목은 억지로 분류하지 않고
+`primaryComparisonSector: null`로 남깁니다.
+
+## 직접 비교 후보
+
+```powershell
+uv run python pipeline/build_direct_candidates.py
+```
+
+`kr_direct_candidates.json`은 전 보통주를 포함합니다. 역할과 비교 섹터가 모두
+확인된 종목만 같은 역할·같은 섹터의 국내 직접 후보를 가질 수 있으며, 후보 수를
+맞추기 위해 다른 역할의 기업을 섞지 않습니다. 비교 섹터만 있거나 WICS 대분류만
+확인된 종목은 각각 `no-qualified-role` 또는 `no-direct-peer` 상태로 남습니다.
+
 ## 로컬 유사 종목 점수
 
 ```powershell
