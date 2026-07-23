@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { directPeerStatusMessage, getDirectPeerInsight } from "@/lib/data/direct-peers";
 import { getDomesticStockInsight } from "@/lib/data/stock-insights";
 import { getKoreanStockBySymbol } from "@/lib/data/krx-master";
 
@@ -13,19 +14,22 @@ function score(value: number) {
   return (value * 100).toFixed(1);
 }
 
+function directScore(value: number | null) {
+  return value == null ? "—" : (value * 100).toFixed(1);
+}
+
 export function DomesticPeerSection({ symbol }: { symbol: string }) {
   const insight = getDomesticStockInsight(symbol);
   const businessStock = getKoreanStockBySymbol(insight.businessSymbol);
+  const directPeers = getDirectPeerInsight(insight.businessSymbol);
 
   return (
     <section className="domestic-insight-section">
       <div className="shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">BUSINESS SIMILARITY</p>
-            <h2>사업 구조가 닮은 국내 기업</h2>
+            <h2>국내 비교</h2>
           </div>
-          <p>이 목록은 매수 추천이 아니라 사업 노출과 제품이 비슷한 기업을 찾은 결과입니다.</p>
         </div>
 
         {insight.isAlias && businessStock && (
@@ -37,7 +41,7 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
         {insight.profile ? (
           <div className="peer-source-strip">
             <div>
-              <small>비교 근거</small>
+              <small>사용한 데이터</small>
               <strong>{insight.profile.reportPeriod} 사업보고서 · KRX 주요 제품</strong>
             </div>
             <div className="peer-source-meta">
@@ -61,11 +65,45 @@ export function DomesticPeerSection({ symbol }: { symbol: string }) {
           <div className="insight-notice caution">연결 가능한 연간 사업 프로필이 없습니다.</div>
         )}
 
+        {directPeers.status === "available" ? (
+          <div className="domestic-peer-block direct-peer-block">
+            <div className="domestic-peer-heading">
+              <div>
+                <strong>확인된 직접 비교 {directPeers.candidates.length}개</strong>
+                <p>같은 주력 역할: {directPeers.role?.label}</p>
+              </div>
+            </div>
+            <div className="domestic-peer-grid">
+              {directPeers.candidates.map((peer) => (
+                <article key={peer.symbol}>
+                  <div className="peer-card-top">
+                    <span>{peer.stock.market}</span>
+                    <strong>{directScore(peer.similarityScore)}</strong>
+                  </div>
+                  <h3>{peer.name}</h3>
+                  <p className="peer-symbol">{peer.symbol} · {peer.stock.industry || "업종 정보 없음"}</p>
+                  <p className="peer-reason">{peer.reason}</p>
+                  {peer.sharedExposures.length > 0 && (
+                    <div className="peer-score-row"><span>공통 노출 {peer.sharedExposures.join(", ")}</span></div>
+                  )}
+                  <Link href={`/stocks/${peer.slug}`}>상세 보기 →</Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : !insight.unavailable && (
+          <div className="insight-notice caution direct-peer-notice">
+            {directPeerStatusMessage(directPeers)}
+          </div>
+        )}
+
         {insight.peers.length > 0 && (
           <div className="domestic-peer-block">
             <div className="domestic-peer-heading">
-              <div><strong>유사도 상위 {insight.peers.length}개</strong></div>
-              <small>규모가 다른 기업도 포함될 수 있으며, 점수는 투자 매력도를 의미하지 않습니다.</small>
+              <div>
+                <strong>사업 유사도 탐색 {insight.peers.length}개</strong>
+                <p>직접 비교와 별개로, 연간 사업 내용과 제품이 비슷한 기업을 참고로 보여줍니다.</p>
+              </div>
             </div>
             <div className="domestic-peer-grid">
               {insight.peers.map((peer) => (

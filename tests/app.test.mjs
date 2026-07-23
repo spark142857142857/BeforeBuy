@@ -13,15 +13,17 @@ function withoutReactMarkers(html) {
   return html.replace(/<!--.*?-->/gs, "");
 }
 
-test("home renders Korean stock search and industry map", async () => {
+test("home centers Korean stock search and alternatives", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = withoutReactMarkers(await response.text());
-  assert.match(html, /이 종목을 사기 전/);
-  assert.match(html, /한국 종목 검색/);
-  assert.match(html, /INDUSTRY MAP/);
+  assert.match(html, /관심 종목과/);
+  assert.match(html, /다른 선택지를 비교해보세요/);
+  assert.match(html, /같은 역할의 기업을 봅니다/);
   assert.match(html, /삼성전자/);
-  assert.match(html, /한국 상장 종목[\s\S]*[0-9,]+[\s\S]*개 검색/);
+  assert.match(html, /한국 상장 종목[\s\S]*[0-9,]+[\s\S]*개/);
+  assert.doesNotMatch(html, /INDUSTRY MAP/);
+  assert.doesNotMatch(html, /설명할 수 있는 대안만/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
 
@@ -56,29 +58,40 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.match(html, /동화약품/);
   assert.match(html, /종목 목록 연결/);
   assert.match(html, /DART 연간 사업 내용/);
-  assert.match(html, /사업 구조가 닮은 국내 기업/);
-  assert.match(html, /유사도 상위[\s\S]*5[\s\S]*개/);
+  assert.match(html, /국내 비교/);
+  assert.match(html, /확인된 직접 비교[\s\S]*6[\s\S]*개/);
+  assert.match(html, /사업 유사도 탐색[\s\S]*5[\s\S]*개/);
   assert.match(html, /삼진제약/);
   assert.match(html, /DART 원문/);
   assert.doesNotMatch(html, /class="business-excerpt"/);
   assert.match(html, /국내외 대안으로 범위 넓히기/);
   assert.match(html, /일라이 릴리/);
   assert.match(html, /TIGER 200 헬스케어/);
-  assert.match(html, /개별 종목과 ETF 직접 비교/);
+  assert.match(html, /종목과 ETF 비교/);
   assert.match(html, /동화약품/);
   assert.match(html, /자체에 100% 직접 노출/);
   assert.match(html, /표시된 주요 5개에는 없음/);
 });
 
-test("Samsung detail includes global peers, ETFs and explanations", async () => {
+test("Samsung detail keeps the alternative comparison concise", async () => {
   const response = await render("/stocks/samsung-electronics");
   assert.equal(response.status, 200);
   const html = withoutReactMarkers(await response.text());
-  assert.match(html, /실제 매수 전 비교할 대안[\s\S]*5[\s\S]*개/);
+  assert.match(html, /함께 볼 만한 종목과 ETF/);
+  assert.match(html, /비슷한 종목/);
+  assert.match(html, /사업 구조 비교/);
+  assert.match(html, /ETF로 넓게/);
+  assert.match(html, /HBM·AI 데이터센터에 더 집중하고, 종합 반도체·모바일 비중은 줄어듭니다/);
+  assert.match(html, /성숙 공정·전력반도체·아날로그에 더 집중하고, 종합 반도체·DRAM·NAND 비중은 줄어듭니다/);
+  assert.match(html, /사업 메모리 제조 → 파운드리/);
+  assert.match(html, /사업 메모리 제조 → 반도체 ETF/);
   assert.match(html, /마이크론/);
-  assert.match(html, /TSMC/);
+  assert.doesNotMatch(html, /href="\/stocks\/tsmc"/);
   assert.match(html, /KODEX 반도체/);
-  assert.match(html, /메모리·AI 반도체/);
+  assert.match(html, /비교하면 달라지는 점/);
+  assert.match(html, /더 커지는 비중/);
+  assert.match(html, /줄어드는 비중/);
+  assert.match(html, /새로 확인할 점/);
   assert.match(html, /주요 구성 종목/);
   assert.match(html, /삼성전자/);
   assert.match(html, /자체에 100% 직접 노출/);
@@ -86,18 +99,44 @@ test("Samsung detail includes global peers, ETFs and explanations", async () => 
   assert.match(html, /1년 수익률/);
   assert.match(html, /1년 수익률\(원화 환산\)/);
   assert.match(html, /\+34\.6% vs \+59\.2%/);
-  assert.match(html, /공통점과 결정 전 차이/);
+  assert.match(html, /숫자로 비교/);
   assert.match(html, /2026-07-15/);
   assert.match(html, /원화 수익률/);
-  assert.match(html, /큐레이션 참고값/);
-  assert.match(html, /화면 구조 검증을 위한 큐레이션 참고값/);
+  assert.match(html, /참고용 데이터입니다/);
+  assert.doesNotMatch(html, /큐레이션 참고값/);
+  assert.doesNotMatch(html, /이 목록은 매수 추천이 아니라/);
+  assert.doesNotMatch(html, /ALTERNATIVE LANDSCAPE/);
+  assert.doesNotMatch(html, /유사도 순위가 아니라 대체했을 때/);
+  assert.doesNotMatch(html, /구성 종목·집중도·선택 종목 편입 비중을 기준으로/);
+});
+
+test("semiconductor profiles reuse the same rules for SK hynix and DB HiTek", async () => {
+  const skResponse = await render("/stocks/sk-hynix");
+  const dbResponse = await render("/stocks/db-hitek");
+  assert.equal(skResponse.status, 200);
+  assert.equal(dbResponse.status, 200);
+  const skHtml = withoutReactMarkers(await skResponse.text());
+  const dbHtml = withoutReactMarkers(await dbResponse.text());
+
+  assert.match(skHtml, /HBM·DRAM·NAND 구성이 비슷하고, 시장과 위험 구조가 다릅니다/);
+  assert.match(skHtml, /공통 제품 HBM · DRAM · NAND/);
+  assert.match(skHtml, /함께 보는 변수 메모리 가격 · AI 인프라 투자 · 반도체 업황/);
+  assert.doesNotMatch(skHtml, /HBM을 포함한 메모리 순수 노출을 글로벌 기준으로 비교합니다/);
+
+  assert.match(dbHtml, /같은 사업 파운드리/);
+  assert.match(dbHtml, /relation-structural-comparison/);
+  assert.match(dbHtml, /첨단 공정·AI 가속기·AI 데이터센터에 더 집중하고, 성숙 공정·전력반도체·아날로그 비중은 줄어듭니다/);
+  assert.match(dbHtml, /함께 보는 변수 파운드리 가동률/);
+  assert.match(dbHtml, /사업 파운드리 → 메모리 제조/);
+  assert.match(dbHtml, /겹치는 사업 파운드리/);
+  assert.doesNotMatch(dbHtml, /파운드리라는 공통 사업을 첨단 공정 글로벌 리더와 비교합니다/);
 });
 
 test("curated ETF alternatives also appear in the direct comparison section", async () => {
   const response = await render("/stocks/alteogen");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /개별 종목과 ETF 직접 비교/);
+  assert.match(html, /종목과 ETF 비교/);
   assert.match(html, /알테오젠[\s\S]*TIGER 200 헬스케어/);
 });
 
@@ -109,11 +148,12 @@ test("restored KOSDAQ GLOBAL detail includes the complete comparison path", asyn
   assert.match(html, /알테오젠/);
   assert.match(html, /2025\.12 사업보고서 · KRX 주요 제품/);
   assert.match(html, /DART 원문/);
-  assert.match(html, /사업 구조가 닮은 국내 기업/);
+  assert.match(html, /국내 비교/);
+  assert.match(html, /확인된 직접 비교/);
   assert.match(html, /지씨셀/);
   assert.match(html, /일라이 릴리/);
   assert.match(html, /TIGER 200 헬스케어/);
-  assert.match(html, /개별 종목과 ETF 직접 비교/);
+  assert.match(html, /종목과 ETF 비교/);
 });
 
 test("basic detail discloses global and ETF coverage gaps", async () => {

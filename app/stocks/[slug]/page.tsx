@@ -8,6 +8,7 @@ import { EtfHoldingsSection } from "@/components/EtfHoldingsSection";
 import { GlobalPeerEtfSection } from "@/components/GlobalPeerEtfSection";
 import { StockEtfComparisonSection } from "@/components/StockEtfComparisonSection";
 import { assets, getAlternatives, getAsset, snapshotMeta } from "@/lib/data/catalog";
+import { getDirectPeerInsight } from "@/lib/data/direct-peers";
 import { getGlobalStockInsight } from "@/lib/data/global-insights";
 import { getKoreanStockMaster, krxSnapshotMeta, type KoreanStockMasterRecord } from "@/lib/data/krx-master";
 import { getDomesticStockInsight } from "@/lib/data/stock-insights";
@@ -44,7 +45,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="detail-page">
-      <DetailHeader showIndustryMap />
+      <DetailHeader />
 
       <section className="asset-hero shell">
         <div className="breadcrumb"><Link href="/">홈</Link><span>/</span><span>{selected.sector}</span><span>/</span><strong>{selected.name}</strong></div>
@@ -56,7 +57,7 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           </div>
           <div className="snapshot-card">
             <span className="reference-dot" />
-            <div><strong>큐레이션 참고값</strong><small>{snapshotMeta.asOf} 검수 기준</small></div>
+            <div><strong>데이터 기준</strong><small>{snapshotMeta.asOf}</small></div>
           </div>
         </div>
         <p className="asset-summary">{selected.summary}</p>
@@ -64,10 +65,6 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
           {selected.exposures.map((item) => <span key={item}>{item}</span>)}
         </div>
       </section>
-
-      {selected.market === "KR" && selected.type === "stock" && (
-        <DomesticPeerSection symbol={selected.ticker} />
-      )}
 
       {selected.type === "etf" && <EtfHoldingsSection slug={selected.slug} />}
 
@@ -86,7 +83,11 @@ export default async function StockDetail({ params }: { params: Promise<{ slug: 
         <StockEtfComparisonSection symbol={selected.ticker} compact />
       )}
 
-      <DetailFooter>투자 권유가 아닌 정보 비교 서비스입니다. 비교 지표는 출처 연결 전 큐레이션 참고값입니다.</DetailFooter>
+      {selected.market === "KR" && selected.type === "stock" && (
+        <DomesticPeerSection symbol={selected.ticker} />
+      )}
+
+      <DetailFooter>비교를 돕기 위한 참고 정보입니다.</DetailFooter>
     </main>
   );
 }
@@ -103,9 +104,10 @@ function securityTypeLabel(type: KoreanStockMasterRecord["securityType"]) {
 
 function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
   const domesticInsight = getDomesticStockInsight(stock.symbol);
+  const directPeerInsight = getDirectPeerInsight(domesticInsight.businessSymbol);
   const globalInsight = getGlobalStockInsight(stock.symbol);
   const hasBusinessProfile = Boolean(domesticInsight.profile);
-  const hasDomesticPeers = domesticInsight.peers.length > 0;
+  const hasDirectPeers = directPeerInsight.status === "available";
   const hasGlobalPeers = globalInsight.peers.length > 0;
   const hasEtfs = globalInsight.etfs.length > 0;
   const hasExpandedAlternatives = hasGlobalPeers || hasEtfs;
@@ -119,9 +121,11 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
     },
     {
       number: "03",
-      label: "자동 국내 유사 종목",
-      state: hasDomesticPeers ? "done" : "limited",
-      note: hasDomesticPeers ? `${domesticInsight.peers.length}개 연결` : "후보 없음",
+      label: "확인된 국내 직접 비교",
+      state: hasDirectPeers ? "done" : "limited",
+      note: hasDirectPeers
+        ? `${directPeerInsight.candidates.length}개 연결`
+        : directPeerInsight.status === "role-under-review" ? "세부 역할 검토 중" : "직접 후보 없음",
     },
     {
       number: "04",
@@ -172,7 +176,7 @@ function BasicStockDetail({ stock }: { stock: KoreanStockMasterRecord }) {
 
         <div className="pipeline-status">
           <p className="eyebrow">DATA PIPELINE STATUS</p>
-          <h2>{hasDomesticPeers && hasExpandedAlternatives
+          <h2>{hasDirectPeers && hasExpandedAlternatives
             ? "국내외 비교 후보가 연결됐습니다"
             : "연결된 데이터 범위를 구분해 표시합니다"}</h2>
           <p>

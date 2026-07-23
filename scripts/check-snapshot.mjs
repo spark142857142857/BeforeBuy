@@ -1,12 +1,15 @@
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
-const [catalog, krxRaw, dartCorpRaw, profilesRaw, similarityRaw, globalLinksRaw, holdingsRaw] = await Promise.all([
+const [catalog, krxRaw, dartCorpRaw, profilesRaw, similarityRaw, taxonomyRaw, directCandidatesRaw, semiconductorCandidatesRaw, globalLinksRaw, holdingsRaw] = await Promise.all([
   readFile(new URL("../lib/data/catalog.ts", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/kr_stocks.json", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/dart_corp_codes.json", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/business_profiles.json", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/kr_similarity.json", import.meta.url), "utf8"),
+  readFile(new URL("../data/generated/kr_company_taxonomy.json", import.meta.url), "utf8"),
+  readFile(new URL("../data/generated/kr_direct_candidates.json", import.meta.url), "utf8"),
+  readFile(new URL("../data/generated/kr_semiconductor_candidates.json", import.meta.url), "utf8"),
   readFile(new URL("../data/generated/global_links.json", import.meta.url), "utf8"),
   readFile(new URL("../data/curated/etf_holdings.json", import.meta.url), "utf8"),
 ]);
@@ -14,9 +17,13 @@ const krx = JSON.parse(krxRaw);
 const dartCorp = JSON.parse(dartCorpRaw);
 const profiles = JSON.parse(profilesRaw);
 const similarity = JSON.parse(similarityRaw);
+const taxonomy = JSON.parse(taxonomyRaw);
+const directCandidates = JSON.parse(directCandidatesRaw);
+const semiconductorCandidates = JSON.parse(semiconductorCandidatesRaw);
 const globalLinks = JSON.parse(globalLinksRaw);
 const holdings = JSON.parse(holdingsRaw);
-const catalogJavaScript = ts.transpileModule(catalog, {
+const catalogForStaticCheck = catalog.replace(/^import .*from "\.\/alternative-relations";\r?\n/m, "");
+const catalogJavaScript = ts.transpileModule(catalogForStaticCheck, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const catalogModule = await import(`data:text/javascript;base64,${Buffer.from(catalogJavaScript).toString("base64")}`);
@@ -155,6 +162,89 @@ for (const [symbol, candidates] of Object.entries(similarity.similar)) {
 if (!similarity.counts.lowConfidenceRecommendations) {
   throw new Error("Similarity snapshot must disclose recommendations with limited comparison evidence");
 }
+if (taxonomy.method.llmUsed !== false || taxonomy.schemaVersion < 2) {
+  throw new Error("Company taxonomy must be deterministic and versioned");
+}
+if (taxonomy.counts.commonStocks !== krx.stocks.filter((stock) => stock.securityType === "common").length) {
+  throw new Error("Company taxonomy does not cover every KRX common stock");
+}
+if (taxonomy.counts.classificationStatus?.["comparison-ready"] < 1800 || taxonomy.counts.classificationStatus?.["wics-only"] < 500) {
+  throw new Error(`Company taxonomy classification coverage is unexpectedly low: ${JSON.stringify(taxonomy.counts.classificationStatus)}`);
+}
+const taxonomyBySymbol = new Map(taxonomy.companies.map((company) => [company.symbol, company]));
+for (const symbol of ["005930", "000990", "000660"]) {
+  const company = taxonomyBySymbol.get(symbol);
+  if (company?.classification?.primaryComparisonSector?.id !== "semiconductors") {
+    throw new Error(`Representative semiconductor taxonomy classification is invalid: ${symbol}`);
+  }
+}
+if (taxonomyBySymbol.get("005930")?.classification?.wics?.primarySector?.id !== "information-technology") {
+  throw new Error("Samsung Electronics taxonomy is missing its WICS-style information-technology layer");
+}
+if (!taxonomyBySymbol.get("000990")?.classification?.tags?.businessModels?.some((tag) => tag.id === "foundry")) {
+  throw new Error("DB HiTek taxonomy is missing the foundry business-model tag");
+}
+if (taxonomyBySymbol.get("005930")?.classification?.primaryRole?.id !== "memory") {
+  throw new Error("Samsung Electronics taxonomy must use memory as the primary semiconductor role");
+}
+if (taxonomyBySymbol.get("000990")?.classification?.primaryRole?.id !== "foundry") {
+  throw new Error("DB HiTek taxonomy must use foundry as the primary semiconductor role");
+}
+if (semiconductorCandidates.method.llmUsed !== false || semiconductorCandidates.schemaVersion < 1) {
+  throw new Error("Semiconductor direct-candidate snapshot must be deterministic and versioned");
+}
+if (directCandidates.method.llmUsed !== false || directCandidates.counts.companies !== taxonomy.counts.commonStocks) {
+  throw new Error("All-company direct-candidate snapshot must be deterministic and cover every common stock");
+}
+for (const [symbol, entry] of Object.entries(directCandidates.links)) {
+  if (!taxonomyBySymbol.has(symbol)) throw new Error(`Direct-candidate source is unknown: ${symbol}`);
+  if (!new Set(["available", "no-direct-peer", "role-under-review", "no-qualified-role"]).has(entry.status)) {
+    throw new Error(`Unknown direct-candidate status: ${symbol} (${entry.status})`);
+  }
+  if (entry.status === "available" && !entry.directCandidates.length) {
+    throw new Error(`Direct-candidate status contradicts candidate list: ${symbol}`);
+  }
+  if (entry.status !== "available" && entry.directCandidates.length) {
+    throw new Error(`Non-available direct-candidate status must not contain candidates: ${symbol}`);
+  }
+  if (["available", "no-direct-peer", "role-under-review"].includes(entry.status) && !entry.primaryRole) {
+    throw new Error(`Direct-candidate status requires its primary role: ${symbol}`);
+  }
+  for (const candidate of entry.directCandidates) {
+    const sourceRole = entry.primaryRole;
+    const targetRole = taxonomyBySymbol.get(candidate.symbol)?.classification?.primaryRole;
+    if (candidate.symbol === symbol || !sourceRole || targetRole?.id !== sourceRole.id || targetRole?.comparisonSectorId !== sourceRole.comparisonSectorId) {
+      throw new Error(`Direct candidate must share the source sector and primary role: ${symbol} -> ${candidate.symbol}`);
+    }
+  }
+}
+if (directCandidates.links["005930"]?.directCandidates?.[0]?.symbol !== "000660") {
+  throw new Error("Samsung Electronics must keep SK hynix as its all-company direct candidate");
+}
+if (semiconductorCandidates.counts.coveredCompanies < 50) {
+  throw new Error(`Semiconductor candidate coverage is unexpectedly low: ${JSON.stringify(semiconductorCandidates.counts)}`);
+}
+for (const [symbol, entry] of Object.entries(semiconductorCandidates.links)) {
+  const source = taxonomyBySymbol.get(symbol);
+  if (!source?.classification?.subSectors?.some((role) => role.comparisonSectorId === "semiconductors" && role.id === entry.primaryRole.id)) {
+    throw new Error(`Semiconductor candidate source role is invalid: ${symbol}`);
+  }
+  if (entry.coverage === "none" && entry.directCandidates.length) {
+    throw new Error(`Semiconductor candidate coverage contradicts candidate list: ${symbol}`);
+  }
+  for (const candidate of entry.directCandidates) {
+    const target = taxonomyBySymbol.get(candidate.symbol);
+    if (candidate.symbol === symbol || !target?.classification?.subSectors?.some((role) => role.comparisonSectorId === "semiconductors" && role.id === entry.primaryRole.id)) {
+      throw new Error(`Semiconductor direct candidate must share the source primary role: ${symbol} -> ${candidate.symbol}`);
+    }
+  }
+}
+if (semiconductorCandidates.links["005930"]?.directCandidates?.[0]?.symbol !== "000660") {
+  throw new Error("Samsung Electronics must keep SK hynix as its direct memory candidate");
+}
+if (semiconductorCandidates.links["000990"]?.coverage !== "none") {
+  throw new Error("DB HiTek must disclose that no domestic pure-foundry direct candidate exists");
+}
 if (!similarity.similar["005380"]?.some((candidate) => candidate.symbol === "000270")) {
   throw new Error("Hyundai Motor similarity results do not include Kia");
 }
@@ -265,7 +355,7 @@ if (!assets.some((asset) => asset.ticker === "266360" && asset.name === "KODEX K
 }
 console.log(
   `Snapshot OK: ${krx.counts.total} Korean stocks, ${dartCorp.counts.mapped} DART mappings, ` +
-    `${profiles.counts.profiles} business profiles, ${similarity.counts.companies} similarity companies, ` +
+    `${profiles.counts.profiles} business profiles, ${taxonomy.counts.commonStocks} taxonomy companies, ${directCandidates.counts.status.available} direct-peer candidate sources, ${semiconductorCandidates.counts.coveredCompanies} semiconductor direct-peer companies, ${similarity.counts.companies} similarity companies, ` +
     `${globalLinks.counts.mappedStocks} global-link stocks, ${requiredEtfs.length} ETF holdings, ` +
     `${assetCount} enriched assets, ${relationBlocks} relation sets`,
 );
