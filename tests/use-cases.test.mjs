@@ -31,12 +31,14 @@ test("UC01 삼성전자: SK하이닉스가 첫 국내 peer이고 글로벌·ETF 
   const structuralComparison = html.indexOf("relation-structural-comparison");
   const nextDomesticPeer = html.indexOf("칩스앤미디어");
   const alternativeLandscape = html.indexOf("함께 볼 만한 종목과 ETF");
-  const domesticSimilarity = html.indexOf("사업이 비슷한 국내 기업");
+  const directComparison = html.indexOf("확인된 직접 비교");
+  const domesticSimilarity = html.indexOf("사업 유사도 탐색");
 
   assert.ok(skHynix >= 0, "SK하이닉스가 표시되어야 한다");
   assert.ok(micron >= 0 && skHynix < micron, "가장 가까운 국내 메모리 peer인 SK하이닉스가 마이크론보다 먼저 표시되어야 한다");
   assert.ok(dbHitek > structuralComparison, "DB하이텍은 메모리 직접 대안이 아니라 사업 구조 비교로 표시되어야 한다");
   assert.ok(nextDomesticPeer < 0 || skHynix < nextDomesticPeer, "SK하이닉스가 다른 국내 후보보다 먼저 표시되어야 한다");
+  assert.ok(directComparison >= 0 && directComparison < domesticSimilarity, "확인된 직접 비교가 사업 유사도 탐색보다 먼저 표시되어야 한다");
   assert.ok(alternativeLandscape >= 0 && alternativeLandscape < domesticSimilarity, "정제된 비교 대안이 자동 국내 유사도보다 먼저 표시되어야 한다");
   assert.match(html, /비슷한 종목/);
   assert.match(html, /사업 구조 비교/);
@@ -53,7 +55,7 @@ test("UC01 삼성전자: SK하이닉스가 첫 국내 peer이고 글로벌·ETF 
 test("UC09 반도체 공통 프로필: DB하이텍은 파운드리 역할과 공정 차이로 비교한다", async () => {
   const html = await htmlFor("/stocks/db-hitek");
   const refinedComparison = html.indexOf("함께 볼 만한 종목과 ETF");
-  const broadSimilarity = html.indexOf("사업이 비슷한 국내 기업");
+  const broadSimilarity = html.indexOf("사업 유사도 탐색");
 
   assert.ok(refinedComparison >= 0 && refinedComparison < broadSimilarity);
   assert.match(html, /relation-structural-comparison/);

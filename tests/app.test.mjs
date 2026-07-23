@@ -13,15 +13,17 @@ function withoutReactMarkers(html) {
   return html.replace(/<!--.*?-->/gs, "");
 }
 
-test("home renders Korean stock search and industry map", async () => {
+test("home centers Korean stock search and alternatives", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = withoutReactMarkers(await response.text());
-  assert.match(html, /이 종목을 사기 전/);
-  assert.match(html, /한국 종목 검색/);
-  assert.match(html, /INDUSTRY MAP/);
+  assert.match(html, /관심 종목과/);
+  assert.match(html, /다른 선택지를 비교해보세요/);
+  assert.match(html, /같은 역할의 기업을 봅니다/);
   assert.match(html, /삼성전자/);
-  assert.match(html, /한국 상장 종목[\s\S]*[0-9,]+[\s\S]*개 검색/);
+  assert.match(html, /한국 상장 종목[\s\S]*[0-9,]+[\s\S]*개/);
+  assert.doesNotMatch(html, /INDUSTRY MAP/);
+  assert.doesNotMatch(html, /설명할 수 있는 대안만/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
 
@@ -56,8 +58,9 @@ test("basic stock page includes annual business profile and domestic peers", asy
   assert.match(html, /동화약품/);
   assert.match(html, /종목 목록 연결/);
   assert.match(html, /DART 연간 사업 내용/);
-  assert.match(html, /사업이 비슷한 국내 기업/);
-  assert.match(html, /비슷한 기업[\s\S]*5[\s\S]*개/);
+  assert.match(html, /국내 비교/);
+  assert.match(html, /확인된 직접 비교[\s\S]*6[\s\S]*개/);
+  assert.match(html, /사업 유사도 탐색[\s\S]*5[\s\S]*개/);
   assert.match(html, /삼진제약/);
   assert.match(html, /DART 원문/);
   assert.doesNotMatch(html, /class="business-excerpt"/);
@@ -145,7 +148,8 @@ test("restored KOSDAQ GLOBAL detail includes the complete comparison path", asyn
   assert.match(html, /알테오젠/);
   assert.match(html, /2025\.12 사업보고서 · KRX 주요 제품/);
   assert.match(html, /DART 원문/);
-  assert.match(html, /사업이 비슷한 국내 기업/);
+  assert.match(html, /국내 비교/);
+  assert.match(html, /확인된 직접 비교/);
   assert.match(html, /지씨셀/);
   assert.match(html, /일라이 릴리/);
   assert.match(html, /TIGER 200 헬스케어/);

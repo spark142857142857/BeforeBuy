@@ -198,8 +198,17 @@ if (directCandidates.method.llmUsed !== false || directCandidates.counts.compani
 }
 for (const [symbol, entry] of Object.entries(directCandidates.links)) {
   if (!taxonomyBySymbol.has(symbol)) throw new Error(`Direct-candidate source is unknown: ${symbol}`);
+  if (!new Set(["available", "no-direct-peer", "role-under-review", "no-qualified-role"]).has(entry.status)) {
+    throw new Error(`Unknown direct-candidate status: ${symbol} (${entry.status})`);
+  }
   if (entry.status === "available" && !entry.directCandidates.length) {
     throw new Error(`Direct-candidate status contradicts candidate list: ${symbol}`);
+  }
+  if (entry.status !== "available" && entry.directCandidates.length) {
+    throw new Error(`Non-available direct-candidate status must not contain candidates: ${symbol}`);
+  }
+  if (["available", "no-direct-peer", "role-under-review"].includes(entry.status) && !entry.primaryRole) {
+    throw new Error(`Direct-candidate status requires its primary role: ${symbol}`);
   }
   for (const candidate of entry.directCandidates) {
     const sourceRole = entry.primaryRole;

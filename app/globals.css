@@ -65,40 +65,9 @@ button { color: inherit; }
 .decision-steps p { color: rgba(255,255,255,.58); margin: 7px 0 0; font-size: 13px; }
 .panel-note { position: absolute; bottom: 24px; left: 30px; right: 30px; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,.55); }
 
-.map-section { background: var(--ink); color: white; padding: 95px 0 105px; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; margin-bottom: 38px; }
 .section-heading h2 { margin: 0; font-size: clamp(30px, 4vw, 48px); letter-spacing: -.045em; }
 .section-heading > p { max-width: 380px; color: var(--muted); line-height: 1.65; margin: 0; word-break: keep-all; }
-.map-section .section-heading > p { color: rgba(255,255,255,.54); }
-.map-section .eyebrow { color: var(--lime); }
-.industry-map { border-top: 1px solid rgba(255,255,255,.2); }
-.sector-card { border-bottom: 1px solid rgba(255,255,255,.2); }
-.sector-card summary { display: grid; grid-template-columns: 55px 1fr 100px 28px; gap: 16px; align-items: center; min-height: 78px; cursor: pointer; list-style: none; }
-.sector-card summary::-webkit-details-marker { display: none; }
-.sector-card summary strong { font-size: 22px; }
-.sector-card summary > span:nth-child(3) { font-size: 12px; color: rgba(255,255,255,.45); text-align: right; }
-.sector-card summary i { font-style: normal; color: var(--lime); font-size: 24px; transition: transform .2s; text-align: center; }
-.sector-card[open] summary i { transform: rotate(45deg); }
-.sector-number { color: var(--lime); font-size: 12px; font-family: monospace; }
-.industry-branches { padding: 4px 0 28px 71px; }
-.industry-branch { display: grid; grid-template-columns: 200px 1fr; gap: 30px; padding: 18px 0; border-top: 1px solid rgba(255,255,255,.08); }
-.industry-branch h3 { margin: 5px 0 0; font-size: 13px; color: rgba(255,255,255,.55); font-weight: 600; }
-.asset-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.asset-chips a { display: flex; align-items: center; gap: 9px; background: #242925; border: 1px solid #3a403b; padding: 9px 11px; font-size: 13px; transition: .18s ease; }
-.asset-chips a:hover { color: var(--ink); background: var(--lime); border-color: var(--lime); transform: translateY(-2px); }
-.asset-chips small { font-size: 9px; color: #9ba39d; border-left: 1px solid #4a514b; padding-left: 8px; }
-.asset-chips a:hover small { color: #42502a; border-color: #849d34; }
-.asset-chips .is-global { border-color: #405287; }
-.asset-chips .is-etf { border-style: dashed; }
-
-.principles { padding: 100px 0 110px; }
-.section-heading.compact { margin-bottom: 34px; }
-.principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); background: var(--surface); }
-.principle-grid article { min-height: 245px; padding: 30px; border-right: 1px solid var(--line); }
-.principle-grid article:last-child { border-right: 0; }
-.principle-grid span { font-family: monospace; color: var(--green); }
-.principle-grid h3 { margin: 50px 0 12px; font-size: 21px; }
-.principle-grid p { color: var(--muted); line-height: 1.7; margin: 0; word-break: keep-all; }
 .site-footer { min-height: 150px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 30px; }
 .site-footer p { color: var(--muted); font-size: 12px; text-align: right; }
 
@@ -237,9 +206,12 @@ button { color: inherit; }
 .insight-notice.caution { border-left-color: #d98532; }
 .domestic-peer-block { margin-top: 32px; }
 .domestic-peer-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 16px; }
-.domestic-peer-heading div { display: flex; gap: 12px; align-items: center; }
+.domestic-peer-heading div { display: flex; gap: 6px; flex-direction: column; align-items: flex-start; }
 .domestic-peer-heading strong { font-size: 20px; }
+.domestic-peer-heading p { margin: 0; color: #64706c; font-size: 12px; line-height: 1.5; }
 .domestic-peer-heading span, .domestic-peer-heading small { color: #64706c; }
+.direct-peer-block { margin-top: 24px; }
+.direct-peer-notice { margin-top: 24px; }
 .domestic-peer-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .domestic-peer-grid article { padding: 18px; background: #fff; border: 1px solid rgba(13, 32, 28, .14); min-width: 0; }
 .peer-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
@@ -340,10 +312,6 @@ button { color: inherit; }
   .hero { grid-template-columns: 1fr; padding-top: 70px; }
   .hero-panel { min-height: 390px; }
   .alternative-grid { grid-template-columns: repeat(2, 1fr); }
-  .principle-grid { grid-template-columns: 1fr; }
-  .principle-grid article { border-right: 0; border-bottom: 1px solid var(--line); min-height: 210px; }
-  .principle-grid article:last-child { border-bottom: 0; }
-  .industry-branch { grid-template-columns: 150px 1fr; }
   .domestic-peer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pipeline-status ol { grid-template-columns: repeat(2, 1fr); }
   .global-peer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -364,12 +332,7 @@ button { color: inherit; }
   .quick-links span { width: 100%; }
   .section-heading { display: block; }
   .section-heading > p { margin-top: 16px; }
-  .map-section, .principles, .alternative-section, .comparison-section, .difference-section, .global-link-section, .etf-holdings-section, .stock-etf-comparison-section { padding-top: 70px; padding-bottom: 75px; }
-  .sector-card summary { grid-template-columns: 35px 1fr 24px; }
-  .sector-card summary > span:nth-child(3) { display: none; }
-  .industry-branches { padding-left: 0; }
-  .industry-branch { grid-template-columns: 1fr; gap: 10px; }
-  .asset-chips a { font-size: 12px; }
+  .alternative-section, .comparison-section, .difference-section, .global-link-section, .etf-holdings-section, .stock-etf-comparison-section { padding-top: 70px; padding-bottom: 75px; }
   .site-footer { align-items: flex-start; flex-direction: column; justify-content: center; }
   .site-footer p { text-align: left; }
   .detail-header nav a:first-child { display: none; }

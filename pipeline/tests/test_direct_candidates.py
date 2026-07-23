@@ -29,8 +29,9 @@ class DirectCandidatesTest(unittest.TestCase):
 
         result = build_candidates(taxonomy, master, {"similar": {}})
 
-        self.assertEqual(result["links"]["A"]["status"], "no-qualified-role")
-        self.assertEqual(result["links"]["B"]["status"], "no-qualified-role")
+        self.assertEqual(result["links"]["A"]["status"], "role-under-review")
+        self.assertEqual(result["links"]["B"]["status"], "role-under-review")
+        self.assertEqual(result["links"]["A"]["primaryRole"]["id"], "software-service")
 
 
 if __name__ == "__main__":

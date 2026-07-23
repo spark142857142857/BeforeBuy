@@ -218,8 +218,6 @@ export const alternatives: Record<string, AlternativeSeed[]> = {
   ],
 };
 
-export const sectors = ["반도체", "모빌리티", "2차전지", "플랫폼", "바이오", "산업재", "금융"];
-
 export const snapshotMeta = {
   asOf: "2026-07-15",
   fxAsOf: "2026-07-15",
@@ -279,16 +277,4 @@ export function getAlternatives(slug: string) {
 
 export function getKoreanStocks() {
   return assets.filter((item) => item.market === "KR" && item.type === "stock");
-}
-
-export function getSectorGroups() {
-  return sectors.map((sector) => ({
-    sector,
-    industries: Array.from(
-      new Set(assets.filter((item) => item.sector === sector).map((item) => item.industry)),
-    ).map((industry) => ({
-      industry,
-      assets: assets.filter((item) => item.sector === sector && item.industry === industry),
-    })),
-  }));
 }

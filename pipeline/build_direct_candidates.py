@@ -86,6 +86,15 @@ def eligible_role(company: dict[str, Any]) -> dict[str, Any] | None:
     return role
 
 
+def role_payload(role: dict[str, Any]) -> dict[str, str]:
+    return {
+        "id": role["id"],
+        "label": role["label"],
+        "comparisonSectorId": role["comparisonSectorId"],
+        "source": role["source"],
+    }
+
+
 def role_key(role: dict[str, Any]) -> tuple[str, str]:
     return role["comparisonSectorId"], role["id"]
 
@@ -112,6 +121,14 @@ def build_candidates(
         symbol = company["symbol"]
         role = roles.get(symbol)
         if role is None:
+            raw_role = company["classification"].get("primaryRole")
+            if raw_role and raw_role.get("source") in {"krx", "dart", "both"}:
+                links[symbol] = {
+                    "status": "role-under-review",
+                    "primaryRole": role_payload(raw_role),
+                    "directCandidates": [],
+                }
+                continue
             links[symbol] = {
                 "status": "no-qualified-role",
                 "directCandidates": [],
@@ -148,12 +165,7 @@ def build_candidates(
         )
         links[symbol] = {
             "status": "available" if candidates else "no-direct-peer",
-            "primaryRole": {
-                "id": role["id"],
-                "label": role["label"],
-                "comparisonSectorId": role["comparisonSectorId"],
-                "source": role["source"],
-            },
+            "primaryRole": role_payload(role),
             "directCandidates": candidates[:MAX_DIRECT_CANDIDATES],
         }
 
