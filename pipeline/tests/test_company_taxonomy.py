@@ -337,6 +337,43 @@ class CompanyTaxonomyTest(unittest.TestCase):
         self.assertEqual(by_symbol["000091"]["classification"]["primaryRole"]["id"], "biosimilar-development")
         self.assertEqual(by_symbol["000092"]["classification"]["primaryRole"]["id"], "biopharma")
 
+    def test_financial_institution_roles_do_not_follow_subsidiary_mentions(self):
+        result = build_taxonomy(
+            {"stocks": [
+                {"symbol": "000093", "name": "가상금융지주", "market": "KOSPI", "securityType": "common", "industry": "기타 금융업", "products": "기타 금융"},
+                {"symbol": "000094", "name": "가상증권", "market": "KOSPI", "securityType": "common", "industry": "금융 지원 서비스업", "products": "유가증권 매매, 중개, 인수"},
+                {"symbol": "000095", "name": "가상보험대리점", "market": "KOSDAQ", "securityType": "common", "industry": "보험 및 연금관련 서비스업", "products": "보험 판매 및 중개"},
+                {"symbol": "000096", "name": "가상은행", "market": "KOSPI", "securityType": "common", "industry": "은행 및 저축기관", "products": "은행업무"},
+            ]},
+            {"companies": {
+                "000093": {"status": "ok", "text": "당사는 은행, 증권, 보험과 카드 자회사를 보유하고 있습니다."},
+                "000094": {"status": "ok", "text": "당사는 투자은행 업무와 유가증권 위탁매매업을 영위합니다."},
+                "000095": {"status": "ok", "text": "당사는 보험 판매를 대리하며 여러 보험회사를 비교합니다."},
+                "000096": {"status": "ok", "text": "당행은 은행업무와 대출 업무를 영위합니다."},
+            }},
+        )
+        by_symbol = {company["symbol"]: company for company in result["companies"]}
+        self.assertEqual(by_symbol["000093"]["classification"]["primaryRole"]["id"], "financial-holding")
+        self.assertEqual(by_symbol["000094"]["classification"]["primaryRole"]["id"], "securities")
+        self.assertIsNone(by_symbol["000095"]["classification"]["primaryRole"])
+        self.assertEqual(by_symbol["000096"]["classification"]["primaryRole"]["id"], "bank")
+
+    def test_insurance_and_credit_roles_keep_distinct_business_models(self):
+        result = build_taxonomy(
+            {"stocks": [
+                {"symbol": "000097", "name": "가상생명", "market": "KOSPI", "securityType": "common", "industry": "보험업", "products": "생명보험"},
+                {"symbol": "000098", "name": "가상손보", "market": "KOSPI", "securityType": "common", "industry": "보험업", "products": "자동차보험, 화재보험"},
+                {"symbol": "000099", "name": "가상재보험", "market": "KOSPI", "securityType": "common", "industry": "재 보험업", "products": "재보험"},
+                {"symbol": "000110", "name": "가상VC", "market": "KOSDAQ", "securityType": "common", "industry": "신탁업 및 집합투자업", "products": "벤처캐피탈"},
+            ]},
+            {"companies": {}},
+        )
+        by_symbol = {company["symbol"]: company for company in result["companies"]}
+        self.assertEqual(by_symbol["000097"]["classification"]["primaryRole"]["id"], "life-insurance")
+        self.assertEqual(by_symbol["000098"]["classification"]["primaryRole"]["id"], "non-life-insurance")
+        self.assertEqual(by_symbol["000099"]["classification"]["primaryRole"]["id"], "reinsurance")
+        self.assertIsNone(by_symbol["000110"]["classification"]["primaryRole"])
+
     def test_platform_and_telecom_roles_do_not_mix_adjacent_businesses(self):
         result = build_taxonomy(
             {"stocks": [

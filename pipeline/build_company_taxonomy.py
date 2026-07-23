@@ -37,6 +37,20 @@ def rule(pattern: str) -> re.Pattern[str]:
     return re.compile(pattern, re.IGNORECASE)
 
 
+# A financial group's annual report naturally mentions the banking, securities,
+# insurance and card businesses of its subsidiaries.  Those mentions do not
+# make the holding company itself a bank or an insurer.  Direct financial-peer
+# roles are therefore derived from the issuer's KRX name/industry/products,
+# not from free text in an annual report.
+DIRECT_FINANCIAL_ROLE_IDS = {
+    "bank",
+    "securities",
+    "insurance",
+    "credit-finance",
+    "financial-holding",
+}
+
+
 # These labels intentionally stop at an investment-comparison level. They are
 # not a claim that the company has only one business; a company can have several
 # comparison sectors while just one is selected as its primary profile.
@@ -119,7 +133,10 @@ TAG_RULES: dict[str, tuple[tuple[str, str, re.Pattern[str]], ...]] = {
         ("biosimilar-development", "바이오시밀러 개발·플랫폼", rule(r"바이오시밀러\s*(?:및\s*바이오베터|개발|기술(?:수출|이전)?|임상|후보)")),
         ("drug-discovery", "신약 개발", rule(r"신약\s*(?:개발|후보|파이프라인)|임상\s*(?:시험|개발)")),
         ("diagnostics", "진단", rule(r"체외\s*진단|진단\s*(?:시약|키트)")),
-        ("complete-vehicle", "완성차", rule(r"완성차|자동차용\s*엔진\s*및\s*자동차\s*제조업")),
+        # KRX puts vehicle makers and engine-piston manufacturers under the
+        # same industry.  Product-level finished-vehicle terms keep parts
+        # companies such as piston makers out of the complete-vehicle role.
+        ("complete-vehicle", "완성차", rule(r"완성차|승용차|(?:중대형)?버스|트럭|특수차량|자동차\s*,\s*자동차부품\s*,\s*차륜\s*,\s*정비")),
         ("auto-parts", "자동차 부품", rule(r"자동차\s*부품|차량용\s*부품")),
         ("tire", "타이어", rule(r"타이어")),
         ("ev-components", "전동화 부품", rule(r"전기차\s*부품|전동화\s*부품|전기\s*구동")),
@@ -427,10 +444,12 @@ SUBSECTOR_RULES: dict[str, tuple[tuple[str, str, str], ...]] = {
     "financials": (
         ("bank", "은행", "bank"),
         ("securities", "증권", "securities"),
-        ("insurance", "보험", "insurance"),
+        ("life-insurance", "생명보험", "life-insurance"),
+        ("non-life-insurance", "손해보험", "non-life-insurance"),
+        ("reinsurance", "재보험", "reinsurance"),
+        ("guarantee-insurance", "보증보험", "guarantee-insurance"),
         ("credit-finance", "여신·카드", "credit-finance"),
         ("financial-holding", "금융지주", "financial-holding"),
-        ("financial-service", "금융 서비스", "financial-service"),
     ),
     "energy": (
         ("oil-gas", "석유·가스", "oil-gas"),
@@ -482,7 +501,10 @@ ROLE_PRIORITIES = {
     "security-software": 110,
     "bank": 110,
     "securities": 110,
-    "insurance": 110,
+    "life-insurance": 110,
+    "non-life-insurance": 110,
+    "reinsurance": 110,
+    "guarantee-insurance": 110,
     "credit-finance": 110,
     "financial-holding": 120,
     "oil-gas": 110,
@@ -575,6 +597,10 @@ def scoped_dart_tags(
         tag
         for tag in match_tags(text, DART_TAG_RULES[group], "dart")
         if comparison_sector_ids.intersection(allowed.get(tag["id"], set()))
+        and not (group == "businessModels" and tag["id"] in DIRECT_FINANCIAL_ROLE_IDS)
+        # A report can mention tire demand or a former tire business. The KRX
+        # product description is required before assigning a tire maker role.
+        and not (group == "businessModels" and tag["id"] == "tire")
     ]
 
 
@@ -597,7 +623,43 @@ def scoped_krx_tags(
         tag
         for tag in tags
         if comparison_sector_ids.intersection(allowed.get(tag["id"], set()))
+        and tag["id"] not in DIRECT_FINANCIAL_ROLE_IDS
     ]
+
+
+def financial_direct_tags(stock: dict[str, Any]) -> list[dict[str, str]]:
+    """Return institution roles from KRX issuer identity and business fields.
+
+    These checks deliberately use individual fields rather than a combined
+    keyword bag.  For example, an insurance-sales intermediary is not an
+    insurer, and a conglomerate that sells ATMs to a bank is not a bank.
+    """
+    name = str(stock.get("name", ""))
+    industry = str(stock.get("industry", ""))
+    products = str(stock.get("products", ""))
+    tags: list[dict[str, str]] = []
+
+    def add(identifier: str, label: str) -> None:
+        tags.append({"id": identifier, "label": label, "source": "krx"})
+
+    if re.search(r"은행\s*및\s*저축기관", industry):
+        add("bank", "은행")
+    if re.search(r"증권", name) or re.search(r"(?:유가)?증권\s*(?:의\s*)?(?:매매|위탁|중개|인수|업)|금융투자업", products):
+        add("securities", "증권")
+    if re.search(r"(?:재\s*)?보험업$", industry):
+        if re.search(r"재\s*보험업$", industry):
+            add("reinsurance", "재보험")
+        elif re.search(r"보증보험|신용보험", products):
+            add("guarantee-insurance", "보증보험")
+        elif re.search(r"생명보험", products):
+            add("life-insurance", "생명보험")
+        else:
+            add("non-life-insurance", "손해보험")
+    if re.search(r"신용카드|할부금융|리스(?:수입)?", products):
+        add("credit-finance", "여신·카드")
+    if re.search(r"(?<!비)금융지주", name + " " + products) or (re.search(r"금융$", name) and industry == "기타 금융업"):
+        add("financial-holding", "금융지주")
+    return tags
 
 
 def with_match_score(match: dict[str, Any]) -> dict[str, Any]:
@@ -678,6 +740,11 @@ def classify_stock(stock: dict[str, Any], company: dict[str, Any] | None) -> dic
         )
         for group, rules in TAG_RULES.items()
     }
+    if primary and primary["id"] == "financials":
+        tag_groups["businessModels"] = merge_tags(
+            tag_groups["businessModels"],
+            financial_direct_tags(stock),
+        )
 
     # This is a deterministic derived tag, not a DART keyword match: a company
     # that has both memory and foundry as confirmed business models is an IDM.

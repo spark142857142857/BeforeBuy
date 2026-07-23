@@ -15,6 +15,56 @@ SIMILARITY_PATH = ROOT / "data" / "generated" / "kr_similarity.json"
 DEFAULT_OUTPUT = ROOT / "data" / "generated" / "kr_direct_candidates.json"
 MAX_DIRECT_CANDIDATES = 6
 
+# A taxonomy role says what a business is exposed to; it does not automatically
+# mean that every company with that broad label is a defensible direct peer.
+# Only roles that have passed sector review can produce a direct-candidate link.
+# Other classified companies remain searchable and keep their sector tags, but
+# are honestly shown as having no qualified direct peer until a narrower role
+# rule exists.
+DIRECT_CANDIDATE_ROLES = {
+    ("automotive", "complete-vehicle"),
+    ("automotive", "tire"),
+    ("biopharma", "biopharma"),
+    ("biopharma", "biopharma-cdmo"),
+    ("biopharma", "biosimilar-development"),
+    ("biopharma", "biosimilar-manufacturing"),
+    ("biopharma", "diagnostics"),
+    ("biopharma", "drug-discovery"),
+    ("financials", "bank"),
+    ("financials", "securities"),
+    ("financials", "life-insurance"),
+    ("financials", "non-life-insurance"),
+    ("financials", "reinsurance"),
+    ("financials", "guarantee-insurance"),
+    ("financials", "credit-finance"),
+    ("financials", "financial-holding"),
+    ("internet-platform", "portal-platform"),
+    ("internet-platform", "commerce-platform"),
+    ("internet-platform", "content-platform"),
+    ("internet-platform", "platform-infrastructure"),
+    ("secondary-battery", "battery-cell"),
+    ("secondary-battery", "battery-cathode"),
+    ("secondary-battery", "battery-anode"),
+    ("secondary-battery", "battery-separator"),
+    ("secondary-battery", "battery-electrolyte"),
+    ("secondary-battery", "battery-equipment"),
+    ("secondary-battery", "battery-recycling"),
+    ("semiconductors", "integrated-device"),
+    ("semiconductors", "memory"),
+    ("semiconductors", "foundry"),
+    ("semiconductors", "fabless"),
+    ("semiconductors", "design-house"),
+    ("semiconductors", "semiconductor-ip"),
+    ("semiconductors", "packaging-osat"),
+    ("semiconductors", "test-inspection"),
+    ("semiconductors", "semiconductor-equipment"),
+    ("semiconductors", "semiconductor-materials-parts"),
+    ("software", "game"),
+    ("telecom", "mobile-carrier"),
+    ("telecom", "telecom-reseller"),
+    ("telecom", "telecom-network-equipment"),
+}
+
 
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -30,6 +80,8 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 def eligible_role(company: dict[str, Any]) -> dict[str, Any] | None:
     role = company["classification"].get("primaryRole")
     if not role or role.get("source") not in {"krx", "dart", "both"}:
+        return None
+    if role_key(role) not in DIRECT_CANDIDATE_ROLES:
         return None
     return role
 
@@ -117,7 +169,8 @@ def build_candidates(
         "source": {"taxonomy": "kr_company_taxonomy.json", "similarity": "kr_similarity.json"},
         "method": {
             "llmUsed": False,
-            "selection": "Only companies with the same comparison sector and confirmed primary role can be direct candidates; no quota is forced.",
+            "selection": "Only sector-reviewed roles with the same confirmed primary role can be direct candidates; no quota is forced.",
+            "rolePolicy": "Broad taxonomy roles remain visible for search and sector context, but they do not create direct peers until a sector-specific rule is reviewed.",
             "ordering": "Existing local similarity score, then market capitalization; the shared role is the eligibility rule.",
         },
         "counts": {
